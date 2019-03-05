@@ -12,7 +12,12 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/googletest)
 
 project(Core)
 
-add_library(Core INTERFACE)
+add_library(Core STATIC
+            src/ThreadPool.cpp
+            include/ThreadPool.hpp
+            include/MessageQueue.hpp
+            include/TestUtil.hpp
+)
 
 option(PACKAGE_TESTS "Build the tests" ON)
 if(PACKAGE_TESTS)
@@ -32,10 +37,12 @@ endif()
 
 configure_file(Core.pc.in Core.pc @ONLY)
 
-target_include_directories(Core INTERFACE include)
+target_include_directories(Core PRIVATE include)
 
 install(TARGETS Core 
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 set(DOXYGEN_IN Doxyfile.in)

@@ -9,6 +9,8 @@
 #include <mutex>
 #include <queue>
 
+namespace Core {
+
 enum class MessagePriority : unsigned {
     Low = 0,
     Normal = 50,
@@ -23,12 +25,14 @@ private:
         MessageContent content;
 
         template<class ...Args>
-        MessageType(unsigned priority, Args&& ... args) : priority(priority), content(std::forward<Args>(args)...) {}
+        MessageType(unsigned priority, Args &&... args) : priority(priority),
+                                                          content(std::forward<Args>(args)...) {}
 
-        bool operator<(const MessageType& rhs) const {
+        bool operator<(const MessageType &rhs) const {
             return priority < rhs.priority;
         }
-        bool operator==(const MessageType& rhs) const {
+
+        bool operator==(const MessageType &rhs) const {
             return priority == rhs.priority;
         }
     };
@@ -38,30 +42,27 @@ private:
     std::priority_queue<MessageType> _queue;
 public:
     MessageQueue() = default;
-    MessageQueue(const MessageQueue&) = delete;
 
-    bool empty() const
-    {
+    MessageQueue(const MessageQueue &) = delete;
+
+    bool empty() const {
         return _queue.empty();
     }
 
     template<class ...Args>
-    void push(Args&& ... args)
-    {
+    void push(Args &&... args) {
         push(MessagePriority::Normal, std::forward<Args>(args)...);
     }
 
     template<class ...Args>
-    void push(MessagePriority priority, Args&& ... args)
-    {
+    void push(MessagePriority priority, Args &&... args) {
         std::unique_lock guard(_queueGuard);
         _queue.emplace(static_cast<unsigned>(priority), std::forward<Args>(args)...);
         conditionVariable.notify_one();
     }
 
     template<class ...Args>
-    void push(unsigned priority, Args&& ... args)
-    {
+    void push(unsigned priority, Args &&... args) {
         std::unique_lock guard(_queueGuard);
         _queue.emplace(priority, std::forward<Args>(args)...);
         conditionVariable.notify_one();
@@ -86,5 +87,7 @@ public:
         });
     }
 };
+
+}
 
 #endif //CORE_MESSAGEQUEUE_HPP
