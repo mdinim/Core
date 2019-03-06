@@ -36,12 +36,12 @@ private:
                 _thread.detach();
         }
 
-        Worker(std::function<void()> job) : _thread(job), _occupied(true) {}
+        explicit Worker(std::function<void()> job) noexcept : _thread(job), _occupied(true) {}
 
         Worker(const Worker&) = delete;
         Worker& operator=(const Worker&) = delete;
 
-        Worker(Worker&& other) {
+        Worker(Worker&& other) noexcept {
             if(_thread.joinable())
                 _thread.join();
 
@@ -84,22 +84,6 @@ private:
     std::thread _poolingThread;
     std::condition_variable_any hasJobOrStopped;
     std::condition_variable hasUnoccupiedThread;
-public:
-    ThreadPool() {
-        _poolingThread = std::thread(std::bind(&ThreadPool::mainLoop, this));
-    }
-
-    ~ThreadPool() {
-        stop(false);
-        _poolingThread.join();
-    }
-
-    void stop(bool waitForQueuedJobs)
-    {
-        _stopped = true;
-        _waitForFinish = waitForQueuedJobs;
-        hasJobOrStopped.notify_one();
-    }
 
     WrappedJob takeNextJob() {
         std::unique_lock lock(_queueGuard);
@@ -116,20 +100,14 @@ public:
         });
 
         return workerIt != _workers.end() ?
-                        std::optional<unsigned>(std::distance(_workers.begin(), workerIt)) :
-                        std::nullopt;
-    }
-
-    bool hasJob() const {
-        std::shared_lock lock(_queueGuard);
-        return _jobQueue.empty();
+               std::optional<unsigned>(std::distance(_workers.begin(), workerIt)) :
+               std::nullopt;
     }
 
     void mainLoop() {
-        while(!_stopped || (_waitForFinish && !hasJob()))
-        {
-            if(!hasJob()) {
-                if(auto unoccupiedIdx = getIdleWorker(); unoccupiedIdx.has_value()) {
+        while (!_stopped || (_waitForFinish && !hasQueuedJob())) {
+            if (hasQueuedJob()) {
+                if (auto unoccupiedIdx = getIdleWorker(); unoccupiedIdx.has_value()) {
                     auto job = takeNextJob();
 
                     std::unique_lock lock(_workerGuard);
@@ -144,10 +122,29 @@ public:
             }
         }
 
-        for(auto& worker : _workers)
-        {
+        for (auto &worker : _workers) {
             worker.free();
         }
+    }
+public:
+    ThreadPool() {
+        _poolingThread = std::thread(std::bind(&ThreadPool::mainLoop, this));
+    }
+
+    ~ThreadPool() {
+        stop(false);
+        _poolingThread.join();
+    }
+
+    void stop(bool waitForQueuedJobs) {
+        _stopped = true;
+        _waitForFinish = waitForQueuedJobs;
+        hasJobOrStopped.notify_one();
+    }
+
+    bool hasQueuedJob() const {
+        std::shared_lock lock(_queueGuard);
+        return !_jobQueue.empty();
     }
 
     template<class Callable, class... Args>
@@ -172,7 +169,6 @@ public:
 
         return task->get_future();
     }
-
 };
 
 }

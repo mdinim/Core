@@ -3,3 +3,8 @@
 //
 
 #include "ThreadPool.hpp"
+
+namespace Core {
+
+
+}
