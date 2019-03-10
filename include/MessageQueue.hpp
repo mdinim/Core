@@ -54,10 +54,10 @@ private:
     };
 
     /// \brief Guards the priority queue.
-    std::mutex _queueGuard;
+    mutable std::mutex _queueGuard;
 
     /// \brief Condition variable to have the ability for users to wait for the next message.
-    std::condition_variable conditionVariable;
+    mutable std::condition_variable conditionVariable;
 
     /// \brief Container of the messages.
     std::priority_queue<MessageType> _queue;
