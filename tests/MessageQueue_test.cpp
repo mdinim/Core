@@ -10,6 +10,8 @@
 #include <thread>
 #include <chrono>
 
+using namespace Core;
+
 TEST(MessageQueue, canBeConstructed)
 {
     MessageQueue<std::string> simpleQueue;
@@ -41,7 +43,7 @@ TEST(MessageQueue, priorityMatters)
     simpleQueue.push("world");
     simpleQueue.push(static_cast<unsigned>(MessagePriority::Normal) + 1, " ");
 
-    std::string result = "";
+    std::string result;
     while(!simpleQueue.empty())
     {
         result += simpleQueue.take();
@@ -54,11 +56,11 @@ TEST(MessageQueue, messagesCanBeWaitedFor)
     using namespace std::chrono_literals;
 
     MessageQueue<std::string> simpleQueue;
-    std::thread dispatcherThreadOne([&simpleQueue](){
+    std::thread dispatcherThreadOne([&simpleQueue]() {
         std::this_thread::sleep_for(.5s);
         simpleQueue.push("delayed msg one");
     });
-    std::thread dispatcherThreadTwo([&simpleQueue](){
+    std::thread dispatcherThreadTwo([&simpleQueue]() {
         std::this_thread::sleep_for(1s);
         simpleQueue.push("delayed msg two");
     });
