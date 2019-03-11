@@ -13,7 +13,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/googletest)
 project(Core)
 
 add_library(Core STATIC
-            src/ThreadPool.cpp
+            src/Json.cpp
             include/ThreadPool.hpp
             include/MessageQueue.hpp
             include/TestUtil.hpp

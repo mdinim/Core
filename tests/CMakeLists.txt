@@ -15,3 +15,6 @@ target_link_libraries(Test_MessageQueue Core)
 
 package_add_test(Test_ThreadPool ThreadPool_test.cpp)
 target_link_libraries(Test_ThreadPool Core)
+
+package_add_test(Test_Json Json_test.cpp)
+target_link_libraries(Test_Json Core)
