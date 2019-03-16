@@ -7,37 +7,26 @@
 
 #include <variant>
 #include <optional>
-#include <vector>
-//TODO: REMOVE THIS
 #include <iostream>
+#include <vector>
+#include <list>
 #include <string>
 #include <stack>
 #include <map>
+
+#include <Utils.hpp>
 
 namespace Core {
 
 class Json {
 private:
-    enum class ParseState {
-        None,
-        Array,
-        Object,
-        Key,
-        Value,
-        String
-    };
-    enum class ValueParseState {
-        None,
-        Bool,
-        String,
-        WholePart,
-        Exponent,
-        ExponentSign,
-        Fractional,
-        LeadingZero
-    };
+    using PropList = std::list<std::variant<std::string, int>>;
+
     using Value = std::variant<bool, int, double, std::string, Json>;
-    using ValueContainer = std::variant<std::map<std::string, Value>, std::vector<Value>>;
+    using MaybeValue = std::optional<Value>;
+    using JsonObject = std::map<std::string, Value>;
+    using JsonArray = std::vector<Value>;
+    using ValueContainer = std::variant<JsonObject, JsonArray>;
 
     ValueContainer _data;
 
@@ -45,30 +34,43 @@ private:
         explicit DataVisitor(const Value& value, std::stack<std::string_view>& keyStack) : value(value), keyStack(keyStack) {}
         const Value& value;
         std::stack<std::string_view>& keyStack;
-        void operator()(std::map<std::string, Value>& container) {
+        void operator()(JsonObject& container) {
             container.emplace(keyStack.top(), value);
             keyStack.pop();
         }
-        void operator()(std::vector<Value>& container) {
+
+        void operator()(JsonArray& container) {
             container.push_back(value);
         }
     };
 
     bool _valid = false;
+
     std::optional<Value> parseValue(const std::string_view& valueString) const;
-    Json(ValueContainer&& container) : _data(std::move(container)), _valid(true) {}
+
+    std::optional<Value> _get(PropList propList) const;
+
+    void print(std::ostream& os, unsigned& tabCount) const;
+
 public:
+    Json() : _data(JsonObject()), _valid(true) {}
+
     Json(const std::string& jsonString);
 
+    std::size_t size() const;
 
     template<class T>
     T get(const std::string &path, T fallbackValue) const {
-
+        auto optional = get<T>(path);
+        return optional ? *optional : fallbackValue;
     }
 
     template<class T>
-    std::optional <T> get(const std::string &path) const {
-
+    std::optional<T> get(const std::string &path) const {
+        auto variant = get(path);
+        if(variant && std::holds_alternative<T>(*variant))
+            return std::get<T>(*variant);
+        return {};
     }
 
     /// \brief Get part of the json.
@@ -103,11 +105,21 @@ public:
     ///         "age": 10
     ///     ]
     /// }
-    std::optional<Json> getNode(const std::string &path) const;
+    std::optional<Value> get(std::string path) const;
 
     template<class T>
     void set(const std::string &path, const T& value) {
 
+    }
+
+    explicit operator bool() const {
+        return valid();
+    }
+
+    bool operator==(const Json& other) const;
+
+    bool operator!=(const Json& other) const {
+        return !(*this == other);
     }
 
     std::string toString() const;
@@ -115,6 +127,8 @@ public:
     bool valid() const {
         return _valid;
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const Json& json);
 };
 
 }

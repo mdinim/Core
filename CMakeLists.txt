@@ -15,6 +15,7 @@ project(Core)
 add_library(Core STATIC
             src/Json.cpp
             include/ThreadPool.hpp
+            include/Utils.hpp
             include/MessageQueue.hpp
             include/TestUtil.hpp
 )

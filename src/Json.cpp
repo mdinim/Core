@@ -10,12 +10,26 @@
 #include <algorithm>
 
 #include <iostream>
+#include <list>
+
+#include "Utils.hpp"
 
 namespace Core {
 
 std::optional<Json::Value> Json::parseValue(const std::string_view& valueString) const {
-    std::stack<ValueParseState> stateStack;
-    stateStack.push(ValueParseState::None);
+    enum class ParseState {
+        None,
+        Bool,
+        String,
+        WholePart,
+        Exponent,
+        ExponentSign,
+        Fractional,
+        LeadingZero
+    };
+
+    std::stack<ParseState> stateStack;
+    stateStack.push(ParseState::None);
     bool isString = false;
     bool isWholeNumber = false;
     bool isFractionalNumber = false;
@@ -31,7 +45,7 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
         const auto &character = *it;
 
         switch(currentState) {
-            case ValueParseState::None:
+            case ParseState::None:
                 if(std::isspace(character))
                     continue;
                 if(shouldEnd)
@@ -42,26 +56,26 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                     case 'f':
                         [[fallthrough]];
                     case 't':
-                        stateStack.push(ValueParseState::Bool);
+                        stateStack.push(ParseState::Bool);
                         continue;
                     case '"':
                         valueStart++;
-                        stateStack.push(ValueParseState::String);
+                        stateStack.push(ParseState::String);
                         continue;
                     case '-':
                         continue;
                     case '0':
-                        stateStack.push(ValueParseState::LeadingZero);
+                        stateStack.push(ParseState::LeadingZero);
                         continue;
                     default:
                         if(std::isdigit(character)) {
-                            stateStack.push(ValueParseState::WholePart);
+                            stateStack.push(ParseState::WholePart);
                             it--;
                             continue;
                         }
                         return {};
                 }
-            case ValueParseState::Bool: {
+            case ParseState::Bool: {
                 using namespace std::string_literals;
                 auto isSpace = [](const auto& c) { return std::isspace(c); };
                 if(std::string_view(&*valueStart, "true"s.size()) == "true") {
@@ -79,7 +93,7 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                 }
                 return {};
             }
-            case ValueParseState::LeadingZero:
+            case ParseState::LeadingZero:
                 if(std::isspace(character)) {
                     shouldEnd = true;
                     continue;
@@ -87,11 +101,11 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                 valueEnd = it + 1;
                 if(character == '.') {
                     stateStack.pop();
-                    stateStack.push(ValueParseState::Fractional);
+                    stateStack.push(ParseState::Fractional);
                     continue;
                 } else
                     return {};
-            case ValueParseState::WholePart:
+            case ParseState::WholePart:
                 isWholeNumber = true;
                 if(std::isspace(character)) {
                     shouldEnd = true;
@@ -101,20 +115,20 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                 switch(character) {
                     case '.':
                         stateStack.pop();
-                        stateStack.push(ValueParseState::Fractional);
+                        stateStack.push(ParseState::Fractional);
                         continue;
                     case 'e':
                         [[fallthrough]];
                     case 'E':
                         stateStack.pop();
-                        stateStack.push(ValueParseState::ExponentSign);
+                        stateStack.push(ParseState::ExponentSign);
                         continue;
                     default:
                         if(std::isdigit(character))
                             continue;
                         return {};
                 }
-            case ValueParseState::Fractional: {
+            case ParseState::Fractional: {
                 isFractionalNumber = true;
                 isWholeNumber = false;
                 if(std::isspace(character)) {
@@ -127,7 +141,7 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                         [[fallthrough]];
                     case 'E':
                         stateStack.pop();
-                        stateStack.push(ValueParseState::ExponentSign);
+                        stateStack.push(ParseState::ExponentSign);
                         continue;
                     default:
                         if(std::isdigit(character))
@@ -135,25 +149,26 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                         return {};
                 }
             }
-            case ValueParseState::ExponentSign:
+            case ParseState::ExponentSign:
                 if(character == '-' || character == '+') {
                     exponentSignProcessed = true;
-                    stateStack.push(ValueParseState::Exponent);
+                    stateStack.push(ParseState::Exponent);
                     continue;
                 }
                 if(std::isdigit(character))
                     continue;
                 return {};
-            case ValueParseState::Exponent: {
+            case ParseState::Exponent: {
                 if(std::isspace(character) && !exponentSignProcessed)
                     return {};
+                valueEnd = it + 1;
                 if(std::isspace(character))
                     shouldEnd = true;
                 if(std::isdigit(character))
                     continue;
                 return {};
             }
-            case ValueParseState::String: {
+            case ParseState::String: {
                 isString = true;
                 if(character == '\\') {
                     escaped = true;
@@ -179,7 +194,62 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
     return {};
 }
 
-Json::Json(const std::string& jsonString) {
+std::optional<Json::Value> Json::_get(Json::PropList propList) const {
+    if(propList.empty())
+    {
+        return {};
+    }
+
+    auto currentProp = std::move(propList.front());
+    propList.erase(propList.begin());
+
+    auto value = visit_variant(currentProp, [this](const std::string& prop) {
+        return visit_variant(_data, [&prop](const JsonObject& object) -> MaybeValue {
+            if(auto it = object.find(prop); it != object.end()) {
+                return it->second;
+            }
+            return std::nullopt;
+        }, [](const JsonArray&) -> MaybeValue {
+            return std::nullopt;
+        });
+    }, [this](const int& prop) {
+        return visit_variant(_data, [](const JsonObject&) -> MaybeValue {
+            return std::nullopt;
+        }, [&prop](const JsonArray& array) -> MaybeValue {
+            if(prop < array.size())
+                return array.at(prop);
+
+            return std::nullopt;
+        });
+    });
+
+    if(!propList.empty() && value) {
+        if(std::holds_alternative<Json>(*value)) {
+            return std::get<Json>(*value)._get(std::move(propList));
+        }
+    }
+
+    return value;
+}
+
+Json::Json(const std::string& jsonString) : _valid(true) {
+    enum class ParseState {
+        None,
+        Array,
+        Object,
+        Key,
+        Value,
+        String
+    };
+
+    static const auto isArray = [](const ValueContainer& container) {
+        return std::holds_alternative<JsonArray>(container);
+    };
+
+    static const auto isObject = [](const ValueContainer& container) {
+        return std::holds_alternative<JsonObject>(container);
+    };
+
     bool escaped = false;
 
     std::stack<ParseState> stateStack;
@@ -192,7 +262,7 @@ Json::Json(const std::string& jsonString) {
     std::optional<std::string::const_iterator> valueStart;
     std::optional<std::string::const_iterator> valueEnd;
 
-    for(auto it = jsonString.begin(); it != jsonString.end(); ++it) {
+    for(auto it = jsonString.begin(); it != jsonString.end() && _valid; ++it) {
         const auto &currentState = stateStack.top();
         const auto &character = *it;
 
@@ -202,39 +272,53 @@ Json::Json(const std::string& jsonString) {
 
         switch(currentState)
         {
+            // Initial state, check if object or array
             case ParseState::None: {
                 switch(character) {
                     case '{':
                         stateStack.push(ParseState::Object);
-                        containerStack.emplace(std::map<std::string, Value>());
+                        containerStack.emplace(JsonObject());
                         continue;
                     case '[':
                         stateStack.push(ParseState::Array);
-                        containerStack.emplace(std::vector<Value>());
+                        containerStack.emplace(JsonArray());
                         continue;
                     default:
-                        return;
+                        _valid = false;
+                        continue;
                 }
             }
             case ParseState::Object: {
                 switch(character)
                 {
+                    // Key starts (and a string)
                     case '"':
                         stateStack.push(ParseState::Key);
                         stateStack.push(ParseState::String);
                         stringStart = it + 1;
                         continue;
+                    // Finished object
                     case '}': {
                         auto currentContainer = std::move(containerStack.top());
+                        // Object should the last container added
+                        if(!isObject(currentContainer)) {
+                            _valid = false;
+                            continue;
+                        }
                         containerStack.pop();
                         if (keyStack.empty()) {
-                            _data = currentContainer;
+                            _data = std::move(currentContainer);
                         } else {
-                            Json currentJson(std::move(currentContainer));
+                            Json currentJson;
+                            currentJson._data = std::move(currentContainer);
                             std::visit(DataVisitor(currentJson, keyStack), containerStack.top());
                         }
-                        if (moreDataShouldCome)
-                            return;
+
+                        // The last value indicated that there is more to come (, afterwards)
+                        if (moreDataShouldCome) {
+                            _valid = false;
+                            continue;
+                        }
                         stateStack.pop();
                         continue;
                     }
@@ -245,36 +329,56 @@ Json::Json(const std::string& jsonString) {
             case ParseState::Array: {
                 switch(character)
                 {
+                    // Object starts
                     case '{':
-                        [[fallthrough]];
+                        containerStack.emplace(JsonObject());
+                        stateStack.push(ParseState::Object);
+                        continue;
+                    // Array of arrays
                     case '[':
-                        [[fallthrough]];
+                        containerStack.emplace(JsonArray());
+                        stateStack.push(ParseState::Array);
+                        continue;
+                    // String value starts, but let the value state handle it
                     case '"':
                         stateStack.push(ParseState::Value);
                         it--;
                         continue;
+                    // Array closed
                     case ']': {
                         auto currentContainer = std::move(containerStack.top());
                         containerStack.pop();
+                        // Array should be on top
+                        if(!isArray(currentContainer)) {
+                            _valid = false;
+                            continue;
+                        }
                         if (keyStack.empty()) {
-                            _data = currentContainer;
+                            _data = std::move(currentContainer);
                         } else {
-                            Json currentJson(std::move(currentContainer));
+                            Json currentJson;
+                            currentJson._data = std::move(currentContainer);
                             std::visit(DataVisitor(currentJson, keyStack), containerStack.top());
                         }
-                        if (moreDataShouldCome)
-                            return;
+
+                        // The last value indicated that there is more to come (, afterwards)
+                        if (moreDataShouldCome) {
+                            _valid = false;
+                            continue;
+                        }
                         stateStack.pop();
                         continue;
                     }
                     default:
                         stateStack.push(ParseState::Value);
+                        it--;
                         continue;
                 }
             }
             case ParseState::Key: {
                 moreDataShouldCome = false;
                 switch(character) {
+                    // Key "closer", Value comes
                     case ':': {
                         std::string_view key(&*stringStart, std::distance(stringStart, it) - 1);
                         keyStack.push(key);
@@ -297,8 +401,21 @@ Json::Json(const std::string& jsonString) {
                         stateStack.push(ParseState::String);
                         continue;
                     case '}':
+                        // Object closed, object should be on top
+                        if(!isObject(containerStack.top())) {
+                            _valid = false;
+                            continue;
+                        }
+
                         [[fallthrough]];
                     case ']':
+                        // Array closed, array should be on top
+                        if(character == ']' && !isArray(containerStack.top())) {
+                            _valid = false;
+                            continue;
+                        }
+
+                        // The value ends here
                         if (!valueEnd)
                             valueEnd = it;
                         [[fallthrough]];
@@ -309,8 +426,10 @@ Json::Json(const std::string& jsonString) {
                             std::string_view value(&*(*valueStart), std::distance(*valueStart, *valueEnd));
 
                             auto parsedValue = parseValue(value);
-                            if(!parsedValue)
-                                return;
+                            if(!parsedValue) {
+                                _valid = false;
+                                continue;
+                            }
                             std::visit(DataVisitor(*parsedValue, keyStack), containerStack.top());
                         }
                         stateStack.pop();
@@ -318,31 +437,40 @@ Json::Json(const std::string& jsonString) {
                         valueEnd.reset();
 
                         if (character == ']' || character == '}')
+                            // Let the previous state (Object or Array) close itself properly.
                             it--;
 
+                        // Indicate that there should be at least one more key/value
                         moreDataShouldCome = character == ',';
 
                         continue;
                     }
                     case '{':
                         stateStack.push(ParseState::Object);
-                        containerStack.emplace(std::map<std::string, Value>());
+                        containerStack.emplace(JsonObject());
                         continue;
                     case '[':
                         stateStack.push(ParseState::Array);
-                        containerStack.emplace(std::vector<Value>());
+                        containerStack.emplace(JsonArray());
                         continue;
                     default:
+                        // Skip whitespaces
                         if (!valueStart && std::isspace(character))
                             continue;
-                        if (valueEnd && !std::isspace(character))
-                            return;
 
+                        // We already found the end of the value, only whitespaces should be afterwards
+                        if (valueEnd && !std::isspace(character)) {
+                            _valid = false;
+                            continue;
+                        }
+
+                        // This is a whitespace, close the value here
                         if (valueStart && !valueEnd && std::isspace(character)) {
                             valueEnd = it;
                             continue;
                         }
 
+                        // Not a whitespace character, value starts here
                         if (!valueStart && !std::isspace(character)) {
                             valueStart = it;
                             continue;
@@ -366,11 +494,174 @@ Json::Json(const std::string& jsonString) {
         }
     }
 
-    _valid = true;
+    _valid = stateStack.top() == ParseState::None;
+    if(!_valid)
+        visit_variant(_data, [](auto& data) {
+            data.clear();
+        });
 }
 
-std::optional<Json> Json::getNode(const std::string &path) const {
-    return {};
+std::optional<Json::Value> Json::get(std::string path) const {
+    PropList propList;
+
+    enum ParseState {
+        Prop,
+        Index
+    };
+
+    auto currentState = ParseState::Prop;
+    std::optional<std::string::iterator> propBegin;
+    std::optional<std::string::iterator> indexBegin;
+    bool escaped = false;
+    int indexesPushed = 0;
+    auto removeLastNProps = [](int& remainingProps, PropList& propList) {
+        while(remainingProps-- > 0)
+            propList.erase(--propList.end());
+        remainingProps = 0;
+    };
+    for(auto it = path.begin(); it != path.end(); it++) {
+        auto& character = *it;
+        if(character == '\\') {
+            escaped = true;
+            path.erase(it);
+        } else {
+            escaped = false;
+        }
+
+        switch(currentState) {
+            case ParseState::Prop: {
+                if(!escaped && character == '[') {
+                    if(propBegin)
+                        propList.emplace_back(std::string(&*propBegin.value(), std::distance(*propBegin, it)));
+                    indexBegin = it + 1;
+                    currentState = ParseState::Index;
+                    indexesPushed = propBegin ? 1 : 0;
+                    break;
+                }
+                if(auto onEnd = it == path.end() - 1; (!escaped && character == '.') || onEnd) {
+                    if(propBegin)
+                        propList.emplace_back(std::string(&*propBegin.value(),
+                                std::distance(*propBegin, onEnd ? it + 1 : it)));
+                    propBegin = it + 1;
+                    break;
+                }
+                if(!propBegin) {
+                    propBegin = it;
+                }
+                break;
+            }
+            case ParseState::Index: {
+                if(!escaped && character == '[') {
+                    indexBegin = it + 1;
+                } else if(!escaped && character == ']') {
+                    std::string indexStr(&*indexBegin.value(), std::distance(*indexBegin, it));
+                    if(std::all_of(indexStr.begin(), indexStr.end(), [](const auto& c){ return std::isdigit(c);})) {
+                        try {
+                            auto index = std::stoi(indexStr);
+
+                            propList.emplace_back(index);
+                            indexesPushed++;
+                        } catch (std::invalid_argument&) {
+                            removeLastNProps(indexesPushed, propList);
+
+                            propList.emplace_back(
+                                    std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
+                        }
+                    } else {
+                        removeLastNProps(indexesPushed, propList);
+                        indexesPushed = 0;
+
+                        propList.emplace_back(
+                                std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
+                    }
+                } else if(!escaped && character == '.') {
+                    currentState = ParseState::Prop;
+                    propBegin = it + 1;
+                } else if(!std::isdigit(character)) {
+                    removeLastNProps(indexesPushed, propList);
+
+                    currentState = ParseState::Prop;
+                }
+                break;
+            }
+        }
+    }
+
+    return _get(std::move(propList));
+}
+
+std::size_t Json::size() const {
+    return visit_variant(_data, [](const auto& container) {
+        return container.size();
+    });
+}
+
+bool Json::operator==(const Core::Json &other) const {
+    if(_data.index() != other._data.index())
+        return false;
+
+    return visit_variant(_data, [&other](const JsonArray& array) {
+        const auto& otherArray = std::get<JsonArray>(other._data);
+        return array == otherArray;
+    }, [&other](const JsonObject& object) {
+        const auto& otherObject = std::get<JsonObject>(other._data);
+        return object == otherObject;
+    });
+}
+
+void Json::print(std::ostream& os, unsigned& tabCount) const {
+    const auto printTabs = [&tabCount, &os]() {
+        for(unsigned i = 0; i < tabCount; i++)
+            os << '\t';
+    };
+
+    auto i = 0;
+    visit_variant(_data, [&os, &i, &printTabs, &tabCount](const Json::JsonArray& array) {
+            os << "[" << std::endl;
+            tabCount++;
+            for(const auto& value : array) {
+                printTabs();
+                visit_variant(value, [&os, &tabCount] (const Json& json) {
+                        json.print(os, tabCount);
+                    },
+                    [&os](const auto& value) {
+                        os << value;
+                    }
+                );
+                if(++i != array.size())
+                    os << ",";
+                os << std::endl;
+            }
+            tabCount--;
+            printTabs();
+            os << "]";
+        }, [&os, &i, &printTabs, &tabCount](const Json::JsonObject& object) {
+            os << "{" << std::endl;
+            tabCount++;
+            for(const auto& [key, value] : object) {
+                printTabs();
+                os << key << ": ";
+                visit_variant(value, [&os, &tabCount] (const Json& json) {
+                        json.print(os, tabCount);
+                    }, [&os](const auto& value) {
+                        os << value;
+                    }
+                );
+                if(++i != object.size())
+                    os << ",";
+                os << std::endl;
+            }
+            tabCount--;
+            printTabs();
+            os << "}";
+        }
+    );
+}
+
+std::ostream& operator<<(std::ostream& os, const Json& json) {
+    unsigned tabCount = 0;
+    json.print(os, tabCount);
+    return os;
 }
 
 }
