@@ -16,7 +16,96 @@
 
 namespace Core {
 
-std::optional<Json::Value> Json::parseValue(const std::string_view& valueString) const {
+Json::PropList Json::parsePath(std::string path) {
+    PropList propList;
+
+    enum ParseState {
+        Prop,
+        Index
+    };
+
+    auto currentState = ParseState::Prop;
+    std::optional<std::string::iterator> propBegin;
+    std::optional<std::string::iterator> indexBegin;
+    bool escaped = false;
+    int indexesPushed = 0;
+    auto removeLastNProps = [](int& remainingProps, PropList& propList) {
+        while(remainingProps-- > 0)
+            propList.erase(--propList.end());
+        remainingProps = 0;
+    };
+    for(auto it = path.begin(); it != path.end(); it++) {
+        auto& character = *it;
+        if(character == '\\') {
+            escaped = true;
+            path.erase(it);
+        } else {
+            escaped = false;
+        }
+
+        switch(currentState) {
+            case ParseState::Prop: {
+                if(!escaped && character == '[') {
+                    if(propBegin)
+                        propList.emplace_back(std::string(&*propBegin.value(), std::distance(*propBegin, it)));
+                    indexBegin = it + 1;
+                    currentState = ParseState::Index;
+                    indexesPushed = propBegin ? 1 : 0;
+                    break;
+                }
+                if(auto onEnd = it == path.end() - 1; (!escaped && character == '.') || onEnd) {
+                    if(propBegin)
+                        propList.emplace_back(std::string(&*propBegin.value(),
+                                std::distance(*propBegin, onEnd ? it + 1 : it)));
+                    propBegin = it + 1;
+                    break;
+                }
+                if(!propBegin) {
+                    propBegin = it;
+                }
+                break;
+            }
+            case ParseState::Index: {
+                if(!escaped && character == '[') {
+                    indexBegin = it + 1;
+                } else if(!escaped && character == ']') {
+                    std::string indexStr(&*indexBegin.value(), std::distance(*indexBegin, it));
+                    if(std::all_of(indexStr.begin(), indexStr.end(), [](const auto& c){ return std::isdigit(c);})) {
+                        try {
+                            auto index = std::stoi(indexStr);
+
+                            propList.emplace_back(index);
+                            indexesPushed++;
+                        } catch (std::invalid_argument&) {
+                            removeLastNProps(indexesPushed, propList);
+
+                            propList.emplace_back(
+                                    std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
+                        }
+                    } else {
+                        removeLastNProps(indexesPushed, propList);
+                        indexesPushed = 0;
+
+                        propList.emplace_back(
+                                std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
+                    }
+                } else if(!escaped && character == '.') {
+                    currentState = ParseState::Prop;
+                    propBegin = it + 1;
+                } else if(!std::isdigit(character)) {
+                    removeLastNProps(indexesPushed, propList);
+
+                    currentState = ParseState::Prop;
+                }
+                break;
+            }
+        }
+    }
+
+    return propList;
+}
+
+std::optional<Json::Value> Json::parseValue(const std::string_view& valueString) {
     enum class ParseState {
         None,
         Bool,
@@ -501,93 +590,8 @@ Json::Json(const std::string& jsonString) : _valid(true) {
         });
 }
 
-std::optional<Json::Value> Json::get(std::string path) const {
-    PropList propList;
-
-    enum ParseState {
-        Prop,
-        Index
-    };
-
-    auto currentState = ParseState::Prop;
-    std::optional<std::string::iterator> propBegin;
-    std::optional<std::string::iterator> indexBegin;
-    bool escaped = false;
-    int indexesPushed = 0;
-    auto removeLastNProps = [](int& remainingProps, PropList& propList) {
-        while(remainingProps-- > 0)
-            propList.erase(--propList.end());
-        remainingProps = 0;
-    };
-    for(auto it = path.begin(); it != path.end(); it++) {
-        auto& character = *it;
-        if(character == '\\') {
-            escaped = true;
-            path.erase(it);
-        } else {
-            escaped = false;
-        }
-
-        switch(currentState) {
-            case ParseState::Prop: {
-                if(!escaped && character == '[') {
-                    if(propBegin)
-                        propList.emplace_back(std::string(&*propBegin.value(), std::distance(*propBegin, it)));
-                    indexBegin = it + 1;
-                    currentState = ParseState::Index;
-                    indexesPushed = propBegin ? 1 : 0;
-                    break;
-                }
-                if(auto onEnd = it == path.end() - 1; (!escaped && character == '.') || onEnd) {
-                    if(propBegin)
-                        propList.emplace_back(std::string(&*propBegin.value(),
-                                std::distance(*propBegin, onEnd ? it + 1 : it)));
-                    propBegin = it + 1;
-                    break;
-                }
-                if(!propBegin) {
-                    propBegin = it;
-                }
-                break;
-            }
-            case ParseState::Index: {
-                if(!escaped && character == '[') {
-                    indexBegin = it + 1;
-                } else if(!escaped && character == ']') {
-                    std::string indexStr(&*indexBegin.value(), std::distance(*indexBegin, it));
-                    if(std::all_of(indexStr.begin(), indexStr.end(), [](const auto& c){ return std::isdigit(c);})) {
-                        try {
-                            auto index = std::stoi(indexStr);
-
-                            propList.emplace_back(index);
-                            indexesPushed++;
-                        } catch (std::invalid_argument&) {
-                            removeLastNProps(indexesPushed, propList);
-
-                            propList.emplace_back(
-                                    std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
-                        }
-                    } else {
-                        removeLastNProps(indexesPushed, propList);
-                        indexesPushed = 0;
-
-                        propList.emplace_back(
-                                std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
-                    }
-                } else if(!escaped && character == '.') {
-                    currentState = ParseState::Prop;
-                    propBegin = it + 1;
-                } else if(!std::isdigit(character)) {
-                    removeLastNProps(indexesPushed, propList);
-
-                    currentState = ParseState::Prop;
-                }
-                break;
-            }
-        }
-    }
-
-    return _get(std::move(propList));
+std::optional<Json::Value> Json::get(const std::string& path) const {
+    return _get(parsePath(path));
 }
 
 std::size_t Json::size() const {

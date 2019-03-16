@@ -20,7 +20,7 @@ namespace Core {
 
 class Json {
 private:
-    using PropList = std::list<std::variant<std::string, int>>;
+    using PropList = std::list<std::variant<std::string, std::size_t>>;
 
     using Value = std::variant<bool, int, double, std::string, Json>;
     using MaybeValue = std::optional<Value>;
@@ -46,11 +46,45 @@ private:
 
     bool _valid = false;
 
-    std::optional<Value> parseValue(const std::string_view& valueString) const;
+    static PropList parsePath(std::string path);
+
+    static std::optional<Value> parseValue(const std::string_view& valueString);
 
     std::optional<Value> _get(PropList propList) const;
 
     void print(std::ostream& os, unsigned& tabCount) const;
+
+    template<class T>
+    void _set(PropList& propList, const T& value) {
+        auto currentProperty = std::move(propList.front());
+        propList.erase(propList.begin());
+
+        auto data = visit_variant(_data, [&currentProperty] (JsonObject& object) {
+            if(!std::holds_alternative<std::string>(currentProperty)) {
+                throw 0;
+            }
+            auto& key = std::get<std::string>(currentProperty);
+            if(object.find(key) == object.end()) {
+                object.emplace(key, Value{});
+            }
+            return std::ref(object.at(key));
+        }, [&currentProperty] (JsonArray& array) {
+            if(!std::holds_alternative<std::size_t>(currentProperty) ||
+                std::get<std::size_t>(currentProperty) >= array.size()) {
+                throw 0;
+            }
+            return std::ref(array.at(std::get<std::size_t>(currentProperty)));
+        });
+
+        if(propList.empty())
+            data.get() = Value(value);
+        else
+            visit_variant(data.get(), [&propList, &value](Json& json) {
+                json._set(propList, value);
+            }, [](const auto& prop) {
+                throw 0;
+            });
+    }
 
 public:
     Json() : _data(JsonObject()), _valid(true) {}
@@ -105,11 +139,23 @@ public:
     ///         "age": 10
     ///     ]
     /// }
-    std::optional<Value> get(std::string path) const;
+    std::optional<Value> get(const std::string& path) const;
 
     template<class T>
     void set(const std::string &path, const T& value) {
+        PropList propList = parsePath(path);
 
+        _set(propList, value);
+    }
+
+    Value operator[](const std::string& property) {
+        if(!std::holds_alternative<JsonObject>(_data)) {
+            throw 0;
+        }
+
+        auto& object = std::get<JsonObject>(_data);
+
+        return object[property];
     }
 
     explicit operator bool() const {
@@ -121,8 +167,6 @@ public:
     bool operator!=(const Json& other) const {
         return !(*this == other);
     }
-
-    std::string toString() const;
 
     bool valid() const {
         return _valid;

@@ -33,6 +33,16 @@ TEST(Json, propertiesCanBeRetreived)
     using namespace std::string_literals;
     Json json("{ \"name\": \"Dani\", \"siblings\": [ {\"name\": \"Anna\", \"age\": 26}]}");
 
+    json.set<std::string>("name", "Lajos");
+
+    auto name = json["sandor"];
+
+    json.set<std::string>("siblings[0].name", "Laura");
+    json.set("name", json);
+
+    std::cout << json << std::endl;
+
+
     ASSERT_TRUE(json.valid());
     ASSERT_TRUE(json.get("name"));
     auto firstSiblingName = json.get<std::string>("siblings[0].name");
