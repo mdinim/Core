@@ -14,6 +14,8 @@ project(Core)
 
 add_library(Core STATIC
             src/Json.cpp
+            include/Json/Json.hpp
+            include/Json/ValueWrapper.hpp
             include/ThreadPool.hpp
             include/Utils.hpp
             include/MessageQueue.hpp
@@ -33,6 +35,9 @@ endif()
 #                ${PROJECT_VERSION}
 #            PUBLIC_HEADER
 #                include/MessageQueue.hpp
+#                include/Json/Json.hpp
+#                include/ThreadPool.hpp
+#                include/Utils.hpp
 #            SOVERSION
 #                1.0.0)
 

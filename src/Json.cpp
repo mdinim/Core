@@ -2,8 +2,7 @@
 // Created by Dániel Molnár on 2019-03-07.
 //
 
-#include "Json.hpp"
-
+#include "Json/Json.hpp"
 #include <cctype>
 #include <stack>
 #include <string_view>

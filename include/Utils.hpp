@@ -22,18 +22,22 @@ namespace Core {
             );
     }
 
+    /// \brief If the parameter pack Ts contains the T type then the holds the value true
     template<typename T, typename... Ts>
     constexpr bool contains()
     { return std::disjunction_v<std::is_same<T, Ts>...>; }
 
+    /// \brief If the parameter pack Ts contains a type that is convertible from T then holds the value true.
     template<typename T, typename... Ts>
     constexpr bool contains_convertible()
     { return std::disjunction_v<std::is_convertible<T, Ts>...>; }
 
+    /// \brief If the parameter pack Ts contains a type that is assignable with T then holds the value true.
     template<typename T, typename ...Ts>
     constexpr bool contains_assignable()
     { return std::disjunction_v<std::is_assignable<Ts, T>...>; }
 
+    /// \brief If the parameter pack Ts contains a type that is constructible with T then holds the value true.
     template<typename T, typename ...Ts>
     constexpr bool contains_constructible()
     { return std::disjunction_v<std::is_constructible<Ts, T>...>; }
