@@ -21,6 +21,22 @@ namespace Core {
                 std::forward<Variant>(variant)
             );
     }
+
+    template<typename T, typename... Ts>
+    constexpr bool contains()
+    { return std::disjunction_v<std::is_same<T, Ts>...>; }
+
+    template<typename T, typename... Ts>
+    constexpr bool contains_convertible()
+    { return std::disjunction_v<std::is_convertible<T, Ts>...>; }
+
+    template<typename T, typename ...Ts>
+    constexpr bool contains_assignable()
+    { return std::disjunction_v<std::is_assignable<Ts, T>...>; }
+
+    template<typename T, typename ...Ts>
+    constexpr bool contains_constructible()
+    { return std::disjunction_v<std::is_constructible<Ts, T>...>; }
 }
 
 #endif //CORE_UTILS_HPP

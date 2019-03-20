@@ -12,7 +12,7 @@
 #include <iostream>
 #include <list>
 
-#include "Utils.hpp"
+#include <Utils.hpp>
 
 namespace Core {
 
@@ -108,6 +108,7 @@ Json::PropList Json::parsePath(std::string path) {
 std::optional<Json::Value> Json::parseValue(const std::string_view& valueString) {
     enum class ParseState {
         None,
+        Null,
         Bool,
         String,
         WholePart,
@@ -116,6 +117,8 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
         Fractional,
         LeadingZero
     };
+
+    static auto isSpace = [](const auto& c) { return std::isspace(c); };
 
     std::stack<ParseState> stateStack;
     stateStack.push(ParseState::None);
@@ -142,6 +145,9 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
 
                 valueStart = it;
                 switch(character) {
+                    case 'n':
+                        stateStack.push(ParseState::Null);
+                        continue;
                     case 'f':
                         [[fallthrough]];
                     case 't':
@@ -164,9 +170,17 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
                         }
                         return {};
                 }
+            case ParseState::Null: {
+                using namespace std::string_literals;
+                if(std::string_view(&*valueStart, "null"s.size()) == "null") {
+                    std::string_view remaining(&*(valueStart+ 4), std::distance(valueStart+4, valueString.end()));
+                    if(std::all_of(remaining.begin(), remaining.end(), isSpace))
+                        return {Null()};
+                }
+                return {};
+            }
             case ParseState::Bool: {
                 using namespace std::string_literals;
-                auto isSpace = [](const auto& c) { return std::isspace(c); };
                 if(std::string_view(&*valueStart, "true"s.size()) == "true") {
                     std::string_view remaining(&*(valueStart+ 4), std::distance(valueStart+4, valueString.end()));
                     if(std::all_of(remaining.begin(), remaining.end(), isSpace))
@@ -259,14 +273,16 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
             }
             case ParseState::String: {
                 isString = true;
-                if(character == '\\') {
-                    escaped = true;
-                    continue;
-                }
                 if(character == '"' && !escaped) {
                     valueEnd = it;
                     stateStack.pop();
                     shouldEnd = true;
+                }
+                if(character == '\\') {
+                    escaped = true;
+                    continue;
+                } else {
+                    escaped = false;
                 }
             }
         }
@@ -275,7 +291,11 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
     std::string_view extractedValue(&*valueStart, std::distance(valueStart, valueEnd));
 
     if(isWholeNumber)
-        return {std::stoi(std::string(extractedValue))};
+        try {
+            return std::stoi(std::string(extractedValue));
+        } catch(std::out_of_range& ex) {
+            return std::stol(std::string(extractedValue));
+        }
     if(isFractionalNumber)
         return {std::stod(std::string(extractedValue))};
     if(isString)
@@ -313,7 +333,7 @@ std::optional<Json::Value> Json::_get(Json::PropList propList) const {
     });
 
     if(!propList.empty() && value) {
-        if(std::holds_alternative<Json>(*value)) {
+        if(value->is<Json>()) {
             return std::get<Json>(*value)._get(std::move(propList));
         }
     }
@@ -398,7 +418,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                         if (keyStack.empty()) {
                             _data = std::move(currentContainer);
                         } else {
-                            Json currentJson;
+                            auto currentJson = Json::createObject();
                             currentJson._data = std::move(currentContainer);
                             std::visit(DataVisitor(currentJson, keyStack), containerStack.top());
                         }
@@ -445,7 +465,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                         if (keyStack.empty()) {
                             _data = std::move(currentContainer);
                         } else {
-                            Json currentJson;
+                            auto currentJson = Json::createObject();
                             currentJson._data = std::move(currentContainer);
                             std::visit(DataVisitor(currentJson, keyStack), containerStack.top());
                         }
@@ -470,6 +490,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                     // Key "closer", Value comes
                     case ':': {
                         std::string_view key(&*stringStart, std::distance(stringStart, it) - 1);
+
                         keyStack.push(key);
                         stateStack.pop();
                         stateStack.push(ParseState::Value);
@@ -549,6 +570,9 @@ Json::Json(const std::string& jsonString) : _valid(true) {
 
                         // We already found the end of the value, only whitespaces should be afterwards
                         if (valueEnd && !std::isspace(character)) {
+                            std::string key = std::string(keyStack.top());
+                            std::string value(&*(*valueStart), std::distance(*valueStart, *valueEnd));
+
                             _valid = false;
                             continue;
                         }
@@ -573,6 +597,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                     case '"':
                         if(!escaped)
                             stateStack.pop();
+                        escaped = false;
                         continue;
                     default:
                         escaped = character == '\\';
@@ -619,19 +644,25 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
             os << '\t';
     };
 
+    static const auto valueVisitor = make_overload {
+        [&os, &tabCount] (const Json& json) {
+            json.print(os, tabCount);
+        }, [&os](const std::string& value) {
+            os << '"' << value << '"';
+        }, [&os](const Null& value) {
+           os << "null";
+        }, [&os](const auto& value) {
+            os << value;
+        }
+    };
+
     auto i = 0;
     visit_variant(_data, [&os, &i, &printTabs, &tabCount](const Json::JsonArray& array) {
             os << "[" << std::endl;
             tabCount++;
             for(const auto& value : array) {
                 printTabs();
-                visit_variant(value, [&os, &tabCount] (const Json& json) {
-                        json.print(os, tabCount);
-                    },
-                    [&os](const auto& value) {
-                        os << value;
-                    }
-                );
+                visit_variant(value, valueVisitor);
                 if(++i != array.size())
                     os << ",";
                 os << std::endl;
@@ -645,12 +676,7 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
             for(const auto& [key, value] : object) {
                 printTabs();
                 os << key << ": ";
-                visit_variant(value, [&os, &tabCount] (const Json& json) {
-                        json.print(os, tabCount);
-                    }, [&os](const auto& value) {
-                        os << value;
-                    }
-                );
+                visit_variant(value, valueVisitor);
                 if(++i != object.size())
                     os << ",";
                 os << std::endl;
@@ -660,6 +686,97 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
             os << "}";
         }
     );
+}
+
+Json::Value& Json::operator[](const std::string &property) {
+    if(!std::holds_alternative<JsonObject>(_data)) {
+        throw bad_json_access("Not a JSON Object");
+    }
+
+    auto& object = std::get<JsonObject>(_data);
+
+    return object[property];
+}
+
+const Json::Value& Json::at(const std::string &property) const {
+    if(!std::holds_alternative<JsonObject>(_data)) {
+        throw bad_json_access("Not a JSON Array");
+    }
+
+    auto& object = std::get<JsonObject>(_data);
+
+    return object.at(property);
+}
+
+Json::Value& Json::at(const std::string &property) {
+    if(!std::holds_alternative<JsonObject>(_data)) {
+        throw bad_json_access("Not a JSON Object");
+    }
+
+    auto& object = std::get<JsonObject>(_data);
+
+    return object.at(property);
+}
+
+
+const Json::Value& Json::at(std::size_t index) const {
+    if(!std::holds_alternative<JsonArray>(_data)) {
+        throw bad_json_access("Not a JSON Array");
+    }
+
+    auto& array = std::get<JsonArray>(_data);
+
+    return array.at(index);
+}
+
+Json::Value& Json::at(std::size_t index) {
+    if(!std::holds_alternative<JsonArray>(_data)) {
+        throw bad_json_access("Not a JSON Object");
+    }
+
+    auto& array = std::get<JsonArray>(_data);
+
+    return array.at(index);
+}
+
+const Json::Value& Json::operator[](std::size_t index) const {
+    if(!std::holds_alternative<JsonArray>(_data)) {
+        throw bad_json_access("Not a JSON Array");
+    }
+
+    auto& array = std::get<JsonArray>(_data);
+
+    return array[index];
+}
+
+Json::Value& Json::operator[](std::size_t index) {
+    if(!std::holds_alternative<JsonArray>(_data)) {
+        throw bad_json_access("Not a JSON Array");
+    }
+
+    auto& array = std::get<JsonArray>(_data);
+
+    return array[index];
+}
+
+void Json::push_back(const Json::Value& value) {
+    if(!std::holds_alternative<JsonArray>(_data)) {
+        throw bad_json_access("Not a JSON Array");
+    }
+
+    auto& array = std::get<JsonArray>(_data);
+
+    array.push_back(value);
+}
+
+void Json::pop_back() {
+    if(!std::holds_alternative<JsonArray>(_data)) {
+        throw bad_json_access("Not a JSON Array");
+    }
+
+    auto& array = std::get<JsonArray>(_data);
+
+    array.pop_back();
 }
 
 std::ostream& operator<<(std::ostream& os, const Json& json) {
