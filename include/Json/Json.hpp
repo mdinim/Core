@@ -7,6 +7,7 @@
 
 #include <variant>
 #include <optional>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <list>
