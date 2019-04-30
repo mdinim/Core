@@ -14,7 +14,7 @@ namespace Core {
 
 /// \brief Wraps the std::variant to enable assignment, equality and type check.
 template<class ...Types>
-class ValueWrapper : public std::variant<Types...>{
+class ValueWrapper : public std::variant<Types...> {
 private:
     using Base = std::variant<Types...>;
 public:
@@ -40,6 +40,14 @@ public:
     template<class T, typename = std::enable_if_t<contains<T, Types...>()>>
     bool operator==(const T& value) const {
         return std::holds_alternative<T>(*this) && std::get<T>(*this) == value;
+    }
+
+    std::variant<Types...>& toStdVariant() {
+        return *this;
+    }
+
+    const std::variant<Types...>& toStdVariant() const {
+        return *this;
     }
 
     /// \brief For convenience a template type-checker.

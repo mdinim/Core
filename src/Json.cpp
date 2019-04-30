@@ -320,7 +320,7 @@ std::optional<Json::Value> Json::_get(Json::PropList propList) const {
         }, [](const JsonArray&) -> MaybeValue {
             return std::nullopt;
         });
-    }, [this](const int& prop) {
+    }, [this](const std::size_t& prop) {
         return visit_variant(_data, [](const JsonObject&) -> MaybeValue {
             return std::nullopt;
         }, [&prop](const JsonArray& array) -> MaybeValue {
@@ -655,13 +655,13 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
         }
     };
 
-    auto i = 0;
+    auto i = 0u;
     visit_variant(_data, [&os, &i, &printTabs, &tabCount](const Json::JsonArray& array) {
             os << "[" << std::endl;
             tabCount++;
             for(const auto& value : array) {
                 printTabs();
-                visit_variant(value, valueVisitor);
+                visit_variant(value.toStdVariant(), valueVisitor);
                 if(++i != array.size())
                     os << ",";
                 os << std::endl;
@@ -675,7 +675,7 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
             for(const auto& [key, value] : object) {
                 printTabs();
                 os << key << ": ";
-                visit_variant(value, valueVisitor);
+                visit_variant(value.toStdVariant(), valueVisitor);
                 if(++i != object.size())
                     os << ",";
                 os << std::endl;

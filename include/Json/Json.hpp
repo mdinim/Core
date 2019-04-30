@@ -7,6 +7,7 @@
 
 #include <variant>
 #include <optional>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <list>
@@ -149,7 +150,7 @@ private:
                 );
 
             // Visit the next one
-            visit_variant(data.get(), [&propList, &value](Json &json) {
+            visit_variant(data.get().toStdVariant(), [&propList, &value](Json &json) {
                 json._set(propList, value);
             }, [](const auto &prop) {
                 // should never happen
