@@ -7,6 +7,7 @@
 #define CORE_MESSAGEQUEUE_HPP
 
 #include <mutex>
+#include <condition_variable>
 #include <queue>
 
 namespace Core {
