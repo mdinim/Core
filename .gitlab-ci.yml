@@ -2,16 +2,19 @@ stages:
     - build
     - test
 
-before_script:
-    - apt-get update -qq && apt-get install -y -qq gcc make cmake
-    - gcc -v
-    - cmake --version
-
 build:
     stage: build
+    before_script:
+    	- apt-get update -qq && apt-get install -y -qq gcc-8 g++-8 make cmake
+        - gcc -v
+        - g++ -v
+        - cmake --version
     script: "echo Hello World!"
 
 test:
     stage: test
+    before_script:
+    	- apt-get update -qq && apt-get install -y -qq cmake
+        - cmake --version
     script: "echo Test World!"
 
