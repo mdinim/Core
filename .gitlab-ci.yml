@@ -27,7 +27,8 @@ build:
 test:
     stage: test
     script:
-        - ls -l
+        - apt-get update -qq && apt-get install -y -qq python3-pip
+        - pip3 install cmake --upgrade
         - cd build
         - ctest .
 
