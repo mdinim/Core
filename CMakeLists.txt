@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.8)
 
 set(CMAKE_CXX_FLAGS "-Wall -pedantic")
 set(CMAKE_CXX_STANDARD 17)
@@ -33,8 +33,6 @@ endif()
 #                include/MessageQueue.hpp
 #                include/Json/Json.hpp
 #                include/ThreadPool.hpp
-#                include/Utils.hpp
-#            SOVERSION
 #                1.0.0)
 
 configure_file(Core.pc.in Core.pc @ONLY)
