@@ -7,16 +7,27 @@ image: gcc
 build:
     stage: build
     before_script:
-        - apt-get update -qq && apt-get install -y -qq cmake
+        - git submodule sync --recursive
+        - git submodule update --init --recursive
+        - apt-get update -qq && apt-get install -y -qq python3-pip
         - gcc -v
         - g++ -v
+        - pip3 install cmake --upgrade
         - cmake --version
-    script: "echo Hello World!"
+    script:
+        - mkdir build
+        - cd build
+        - cmake ..
+        - cmake --build .
+    artifacts:
+        paths:
+            - build/
+    expire_in: 15 minutes
 
 test:
     stage: test
-    before_script:
-        - apt-get update -qq && apt-get install -y -qq cmake
-        - cmake --version
-    script: "echo Test World!"
+    script:
+        - ls -l
+        - cd build
+        - ctest .
 
