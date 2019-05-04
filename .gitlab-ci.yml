@@ -1,0 +1,16 @@
+stages:
+	- build
+	- test
+
+before_script:
+	- apt-get update -qq && apt-get install -y -qq clang-7 make cmake
+	- clang -v
+	- cmake -v
+
+build:
+	stage: build
+	script: "echo Hello World!"
+
+test:
+	stage: test
+	script: "echo Test World!"
