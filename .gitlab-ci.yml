@@ -22,7 +22,7 @@ build:
     artifacts:
         paths:
             - build/
-    expire_in: 15 minutes
+        expire_in: 15 minutes
 
 test:
     stage: test
