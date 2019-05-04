@@ -2,6 +2,8 @@ stages:
     - build
     - test
 
+image: gcc
+
 build:
     stage: build
     before_script:
