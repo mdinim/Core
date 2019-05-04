@@ -3,7 +3,7 @@ stages:
     - test
 
 before_script:
-    - apt-get update -qq && apt-get install -y -qq clang-7 make cmake
+    - apt-get update -qq && apt-get install -y -qq clang make cmake
     - clang -v
     - cmake -v
 
