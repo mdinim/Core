@@ -3,9 +3,9 @@ stages:
     - test
 
 before_script:
-    - apt-get update -qq && apt-get install -y -qq clang make cmake
-    - clang -v
-    - cmake -v
+    - apt-get update -qq && apt-get install -y -qq gcc make cmake
+    - gcc -v
+    - cmake --version
 
 build:
     stage: build
