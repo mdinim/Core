@@ -185,7 +185,8 @@ public:
     /// Does not wait for its Workers to finish, does not clears its job queue first.
     ~ThreadPool() {
         stop(false);
-        _poolingThread.join();
+        if(_poolingThread.joinable())
+            _poolingThread.join();
     }
 
     /// \brief Stop the thread pool.
