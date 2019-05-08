@@ -30,5 +30,5 @@ test:
         - apt-get update -qq && apt-get install -y -qq python3-pip
         - pip3 install cmake --upgrade
         - cd build
-        - ctest .
+        - ctest . -VV
 
