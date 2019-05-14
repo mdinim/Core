@@ -38,7 +38,7 @@ private:
         std::thread _thread;
 
         /// \brief Flag that signals if the worker is occupied.
-        bool _occupied = false;
+        std::atomic_bool _occupied = false;
     public:
         /// \brief Construct an empty worker (with nothing to do)
         Worker() = default;
@@ -68,7 +68,7 @@ private:
                 _thread.join();
 
             _thread = std::move(other._thread);
-            _occupied = other._occupied;
+            _occupied = other._occupied.load();
             other._occupied = false;
         }
 
@@ -79,7 +79,7 @@ private:
                 _thread.join();
 
             _thread = std::move(other._thread);
-            _occupied = other._occupied;
+            _occupied = other._occupied.load();
             other._occupied = false;
             return *this;
         }
@@ -150,20 +150,23 @@ private:
 
     /// \brief Main loop that does the orchestration.
     void mainLoop() {
-        while (!_stopped || (_waitForFinish && !hasQueuedJob())) {
-            if (hasQueuedJob()) {
+        while (!_stopped || (_waitForFinish && hasQueuedJob())) {
+            if (hasQueuedJob() && (!_stopped || _waitForFinish)) {
                 if (auto unoccupiedIdx = getIdleWorker(); unoccupiedIdx.has_value()) {
                     auto job = takeNextJob();
 
-                    std::unique_lock lock(_workerGuard);
-                    _workers.at(unoccupiedIdx.value()) = Worker(std::bind(job, unoccupiedIdx.value()));
+                    if(_workers.at(unoccupiedIdx.value()).isFree()) {
+                        std::unique_lock lock(_workerGuard);
+                        _workers.at(unoccupiedIdx.value()) = Worker(std::bind(job, unoccupiedIdx.value()));
+                    }
                 } else {
                     std::unique_lock lock(_workerGuard);
                     hasUnoccupiedWorker.wait(lock);
                 }
             } else {
                 std::unique_lock lock(_queueGuard);
-                hasJobOrStopped.wait(lock);
+                if(_jobQueue.empty() && (!_stopped || _waitForFinish))
+                    hasJobOrStopped.wait(lock);
             }
         }
 
@@ -182,7 +185,8 @@ public:
     /// Does not wait for its Workers to finish, does not clears its job queue first.
     ~ThreadPool() {
         stop(false);
-        _poolingThread.join();
+        if(_poolingThread.joinable())
+            _poolingThread.join();
     }
 
     /// \brief Stop the thread pool.
