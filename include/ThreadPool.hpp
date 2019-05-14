@@ -150,8 +150,8 @@ private:
 
     /// \brief Main loop that does the orchestration.
     void mainLoop() {
-        while (!_stopped || (_waitForFinish && !hasQueuedJob())) {
-            if (hasQueuedJob()) {
+        while (!_stopped || (_waitForFinish && hasQueuedJob())) {
+            if (hasQueuedJob() && (!_stopped || _waitForFinish)) {
                 if (auto unoccupiedIdx = getIdleWorker(); unoccupiedIdx.has_value()) {
                     auto job = takeNextJob();
 
@@ -163,9 +163,9 @@ private:
                     std::unique_lock lock(_workerGuard);
                     hasUnoccupiedWorker.wait(lock);
                 }
-            } else if (!hasQueuedJob() && (!_stopped || _waitForFinish)) {
+            } else {
                 std::unique_lock lock(_queueGuard);
-                if(_jobQueue.empty())
+                if(_jobQueue.empty() && (!_stopped || _waitForFinish))
                     hasJobOrStopped.wait(lock);
             }
         }
