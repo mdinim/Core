@@ -83,7 +83,7 @@ private:
             other._occupied = false;
             return *this;
         }
-
+        
         /// \brief Lock the worker.
         void lock() {
             _occupied = true;
@@ -125,11 +125,14 @@ private:
     std::condition_variable_any hasJobOrStopped;
 
     /// \brief Condition variable to wait finishing workers.
-    std::condition_variable hasUnoccupiedWorker;
+    std::condition_variable hasUnoccupiedWorkerOrStopped;
 
     /// \brief Retreive the next job to do.
-    WrappedJob takeNextJob() {
-        std::unique_lock lock(_queueGuard);
+    std::optional<WrappedJob> takeNextJob() {
+        if (_jobQueue.empty()) {
+            return std::nullopt;
+        }
+        
         WrappedJob job = std::move(_jobQueue.front());
         _jobQueue.pop();
 
@@ -138,38 +141,43 @@ private:
 
     /// \brief Retreive the index of an idling Worker.
     std::optional<unsigned> getIdleWorker() const {
-        std::unique_lock lock(_workerGuard);
         auto workerIt = std::find_if(_workers.begin(), _workers.end(), [](const auto &worker) {
             return worker.isFree();
         });
 
         return workerIt != _workers.end() ?
-               std::optional<unsigned>(std::distance(_workers.begin(), workerIt)) :
-               std::nullopt;
+            std::optional<unsigned>(std::distance(_workers.begin(), workerIt)) : std::nullopt;
+    }
+    
+    bool shouldStop() const {
+        std::shared_lock queueLock(_queueGuard);
+        return unsafeShouldStop();
+    }
+    
+    bool unsafeShouldStop() const {
+        return _stopped && (_jobQueue.empty() || !_waitForFinish);
     }
 
     /// \brief Main loop that does the orchestration.
     void mainLoop() {
-        while (!_stopped || (_waitForFinish && hasQueuedJob())) {
-            if (hasQueuedJob() && (!_stopped || _waitForFinish)) {
-                if (auto unoccupiedIdx = getIdleWorker(); unoccupiedIdx.has_value()) {
-                    auto job = takeNextJob();
-
-                    if(_workers.at(unoccupiedIdx.value()).isFree()) {
-                        std::unique_lock lock(_workerGuard);
-                        _workers.at(unoccupiedIdx.value()) = Worker(std::bind(job, unoccupiedIdx.value()));
-                    }
-                } else {
-                    std::unique_lock lock(_workerGuard);
-                    hasUnoccupiedWorker.wait(lock);
-                }
-            } else {
-                std::unique_lock lock(_queueGuard);
-                if(_jobQueue.empty() && (!_stopped || _waitForFinish))
-                    hasJobOrStopped.wait(lock);
-            }
+        while (!shouldStop()) {
+            std::unique_lock workerLock(_workerGuard);
+            hasUnoccupiedWorkerOrStopped.wait(workerLock,
+                                          [this](){ return getIdleWorker().has_value() || unsafeShouldStop(); });
+            if(shouldStop())
+                continue;
+            
+            auto workerIndex = getIdleWorker();
+            
+            std::unique_lock queueLock(_queueGuard);
+            hasJobOrStopped.wait(queueLock, [this](){ return !_jobQueue.empty() || unsafeShouldStop(); });
+            if(unsafeShouldStop())
+                continue;
+            
+            auto job = takeNextJob();
+            _workers.at(workerIndex.value()) = Worker(std::bind(job.value(), workerIndex.value()));
         }
-
+        
         for (auto &worker : _workers) {
             worker.free();
         }
@@ -194,6 +202,9 @@ public:
     void stop(bool waitForQueuedJobs) {
         _stopped = true;
         _waitForFinish = waitForQueuedJobs;
+
+        std::unique_lock queueLock(_queueGuard); // Wait for the loop to start waiting for the notification
+        hasUnoccupiedWorkerOrStopped.notify_one();
         hasJobOrStopped.notify_one();
     }
 
@@ -214,11 +225,8 @@ public:
         auto wrappedJob = [this, task, args = std::make_tuple(std::forward<Args>(args)...)](unsigned idx) {
             std::apply(*task, args);
 
-            {
-                std::unique_lock lock(_workerGuard);
-                _workers.at(idx).free();
-            }
-            hasUnoccupiedWorker.notify_one();
+            _workers.at(idx).free();
+            hasUnoccupiedWorkerOrStopped.notify_one();
         };
 
         {
