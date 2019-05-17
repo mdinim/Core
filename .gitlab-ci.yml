@@ -17,7 +17,7 @@ build:
     script:
         - mkdir build
         - cd build
-        - cmake ..
+        - cmake .. -DCMAKE_BUILD_TYPE=RELEASE
         - cmake --build .
     artifacts:
         paths:
@@ -30,5 +30,5 @@ test:
         - apt-get update -qq && apt-get install -y -qq python3-pip
         - pip3 install cmake --upgrade
         - cd build
-        - ctest . -V
+        - ctest . -V --repeat-until-fail 10
 
