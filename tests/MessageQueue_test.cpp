@@ -2,7 +2,7 @@
 // Created by Dániel Molnár on 2019-03-03.
 //
 
-#include <MessageQueue.hpp>
+#include <MessageQueue/MessageQueue.hpp>
 #include <TestUtil.hpp>
 
 #include <gtest/gtest.h>
