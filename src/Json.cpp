@@ -648,7 +648,7 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
             json.print(os, tabCount);
         }, [&os](const std::string& value) {
             os << '"' << value << '"';
-        }, [&os](const Null& value) {
+        }, [&os](const Null&) {
            os << "null";
         }, [&os](const auto& value) {
             os << value;

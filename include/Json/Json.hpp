@@ -152,7 +152,7 @@ private:
             // Visit the next one
             visit_variant(data.get().toStdVariant(), [&propList, &value](Json &json) {
                 json._set(propList, value);
-            }, [](const auto &prop) {
+            }, [](const auto&) {
                 // should never happen
             });
         }
