@@ -90,3 +90,32 @@ TEST(ThreadPool, hasQueuedJobFlag)
     sleepForAWhile.get();
     ASSERT_FALSE(pool.hasQueuedJob());
 }
+
+TEST(ThreadPool, gracefulStop)
+{
+    using namespace std::chrono_literals;
+
+    std::vector<std::future<unsigned>> futures;
+    {
+        ThreadPool<5> pool;
+
+        futures.reserve(1000);
+        for (auto i = 0u; i < 1000u; ++i) {
+            futures.push_back(pool.addJob([i]() {
+                std::this_thread::sleep_for(1ms);
+                return i;
+            }));
+        }
+
+        pool.stop(true);
+        auto invalidFuture = pool.addJob([]() { return -1; });
+        ASSERT_FALSE(invalidFuture.valid());
+        ASSERT_TRUE(pool.hasQueuedJob());
+    }
+
+    for (auto i = 0u; i < 1000u; ++i) {
+        auto& future = futures.at(i);
+        auto result = future.get();
+        ASSERT_EQ(result, i);
+    }
+}
