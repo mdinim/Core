@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(CMAKE_CXX_FLAGS "-Wall -pedantic")
+set(CMAKE_CXX_FLAGS "-Wall -pedantic -Werror -Wextra")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
@@ -12,10 +12,12 @@ add_library(Core STATIC
             src/Json.cpp
             include/Json/Json.hpp
             include/Json/ValueWrapper.hpp
+
             include/ThreadPool.hpp
             include/Utils.hpp
-            include/MessageQueue.hpp
             include/TestUtil.hpp
+
+            include/MessageQueue.hpp
 )
 
 option(PACKAGE_TESTS "Build the tests" ON)
