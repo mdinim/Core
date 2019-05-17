@@ -1,0 +1,7 @@
+get_filename_component(Core_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+if(NOT TARGET Core::Core)
+	include("${Core_CMAKE_DIR}/CoreTargets.cmake")
+endif()
+
+set(Core_LIBRARIES Core::Core)

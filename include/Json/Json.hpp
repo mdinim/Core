@@ -16,7 +16,7 @@
 #include <map>
 
 #include <Utils.hpp>
-#include <Json/ValueWrapper.hpp>
+#include "../../src/Json/ValueWrapper.hpp"
 
 namespace Core {
 

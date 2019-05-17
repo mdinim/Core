@@ -1,51 +1,87 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(CMAKE_CXX_FLAGS "-Wall -pedantic -Werror -Wextra")
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/googletest)
+# Project name
+project(Core VERSION 0.0.1 LANGUAGES CXX)
 
-project(Core)
-
+# Single target currently
 add_library(Core STATIC
-            src/Json.cpp
-            include/Json/Json.hpp
-            include/Json/ValueWrapper.hpp
+        include/Json/Json.hpp
+        src/Json/Json.cpp
+        src/Json/ValueWrapper.hpp
 
-            include/ThreadPool.hpp
-            include/Utils.hpp
-            include/TestUtil.hpp
+        include/ThreadPool.hpp
+        include/Utils.hpp
+        include/TestUtil.hpp
 
-            include/MessageQueue.hpp
+        include/MessageQueue.hpp
+)
+
+# Compile options
+target_compile_options(Core PRIVATE -Wall -pedantic -Werror -Wextra)
+target_compile_features(Core PUBLIC cxx_std_17)
+
+# Include dirs
+target_include_directories(Core
+        PUBLIC
+            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+        )
+
+# Install steps
+install(TARGETS Core
+        EXPORT core-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Export targets
+install(EXPORT core-targets
+        FILE
+        CoreTargets.cmake
+        NAMESPACE
+        Core::
+        DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}/cmake/Core
+        )
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/CoreConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfig.cmake
+        INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+export(EXPORT core-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/CoreTargets.cmake NAMESPACE Core::)
+
+export(PACKAGE Core)
+
+configure_file(Core.pc.in Core.pc @ONLY)
+
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfigVersion.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
 )
 
 option(PACKAGE_TESTS "Build the tests" ON)
 if(PACKAGE_TESTS)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/googletest)
+
     enable_testing()
     add_subdirectory(tests)
 endif()
-
-#set_target_properties(Core
-#        PROPERTIES
-#            FRAMEWORK
-#            VERSION
-#                ${PROJECT_VERSION}
-#            PUBLIC_HEADER
-#                include/MessageQueue.hpp
-#                include/Json/Json.hpp
-#                include/ThreadPool.hpp
-#                1.0.0)
-
-configure_file(Core.pc.in Core.pc @ONLY)
-
-target_include_directories(Core PRIVATE include)
-
-install(TARGETS Core 
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if(CREATE_DOCS)
     find_package(Doxygen
