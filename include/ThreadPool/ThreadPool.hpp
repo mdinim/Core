@@ -38,10 +38,15 @@ private:
     template<class Callable, class ...Args>
     using ResultTypeOfCallable = typename std::invoke_result<Callable, Args...>::type;
 
+    /// \brief Wrap a job with its priority into this simple struct
     struct WrappedJob {
+        /// \brief Priority of the job.
         unsigned priority;
+
+        /// \biref function wrapper around the job to do.
         std::function<void()> job;
 
+        /// \brief Comparison operator to support the priority queue
         bool operator<(const WrappedJob& rhs) const {
             return priority < rhs.priority;
         }
@@ -180,12 +185,14 @@ public:
         return !_queue->empty();
     }
 
+    /// \biref Add a job with normal priority (default). Convenience function.
     template<class Callable, class... Args>
     auto add_job(Callable job, Args... args)
         -> std::future<ResultTypeOfCallable<Callable, Args...>> {
         return add_job(JobPriority::Normal, job, args...);
     }
 
+    /// \biref Add a job with pre-defined priority (\see Core::JobPriority). Convenience function.
     template<class Callable, class... Args>
     auto add_job(JobPriority priority, Callable job, Args... args)
     -> std::future<ResultTypeOfCallable<Callable, Args...>> {
@@ -193,6 +200,8 @@ public:
     }
 
     /// \brief Add a job.
+    /// \param priority a number representing the priority of the job. The higher the sooner the job is going to get
+    /// done.
     /// \param job any callable (functor, lambda, std::function, function pointer).
     /// \param args parameters the callable should be invoked with.
     /// \returns std::future that'll get the result if its done.
