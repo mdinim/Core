@@ -105,9 +105,9 @@ TEST(ThreadPool, prioritized_tasks)
     ThreadPool<1> pool;
 
     std::vector<unsigned> results;
-    auto first_job = pool.add_job(sleep_for(50ms));
+    auto first_job = pool.add_job(sleep_for(100ms));
 
-    unsigned priority = static_cast<unsigned>(JobPriority::Low);
+    unsigned priority = 0;
     auto get_prio_job = [&results, &priority]() {
         return  [&results, priority]() {
             results.push_back(priority);
@@ -115,13 +115,15 @@ TEST(ThreadPool, prioritized_tasks)
     };
 
     // First job takes 50 ms, pour a bunch of prioritized jobs in.
-    auto low_job = pool.add_job(priority, get_prio_job());
     std::vector<std::future<void>> futures;
+
+    priority = static_cast<unsigned>(JobPriority::Low);
+    futures.push_back(pool.add_job(priority, get_prio_job()));
 
     priority = static_cast<unsigned>(JobPriority::High);
     futures.push_back(pool.add_job(priority, get_prio_job()));
 
-    priority = static_cast<unsigned>(JobPriority::Low);
+    priority = static_cast<unsigned>(JobPriority::Normal);
     futures.push_back(pool.add_job(priority, get_prio_job()));
 
     priority = static_cast<unsigned>(JobPriority::High) + 1;
@@ -140,6 +142,11 @@ TEST(ThreadPool, prioritized_tasks)
 
     // if all went well, the jobs ran in order of their priority, not in the order they were queued in
     // the results vector should be sorted backwards.
+    std::stringstream result_str;
+    for(const auto& result : results)
+         result_str << result << " ";
+    TEST_INFO << "Priority order of results: " << result_str.str() << std::endl;
+
     ASSERT_TRUE(std::is_sorted(results.begin(), results.end(), std::greater<>()));
 }
 
