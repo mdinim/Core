@@ -27,16 +27,16 @@ std::string foo() {
 TEST(ThreadPool, canBeConstructed)
 {
     ThreadPool<10> pool;
-    ASSERT_FALSE(pool.hasQueuedJob());
+    ASSERT_FALSE(pool.has_queued_job());
 }
 
 TEST(ThreadPool, resultCanBeRetrieved)
 {
     ThreadPool<5> pool;
 
-    auto intResult = pool.addJob([](){ return 1; });
-    auto stringResult = pool.addJob(foo);
-    auto doubleResult = pool.addJob(Functor(), 1, "");
+    auto intResult = pool.add_job([]() { return 1; });
+    auto stringResult = pool.add_job(foo);
+    auto doubleResult = pool.add_job(Functor(), 1, "");
 
     ASSERT_EQ(intResult.get(), 1);
     ASSERT_EQ(stringResult.get(), "Hello World!");
@@ -52,9 +52,9 @@ TEST(ThreadPool, runsParalell)
 
     ThreadPool<1> singleThreadPool;
     auto timeAtQueueing = std::chrono::high_resolution_clock::now();
-    singleThreadPool.addJob(sleep100ms);
-    singleThreadPool.addJob(sleep100ms);
-    auto lastResult = singleThreadPool.addJob(sleep100ms);
+    singleThreadPool.add_job(sleep100ms);
+    singleThreadPool.add_job(sleep100ms);
+    auto lastResult = singleThreadPool.add_job(sleep100ms);
     lastResult.get();
     auto timeAtEnd = std::chrono::high_resolution_clock::now();
     auto elapsedMilliseconds =
@@ -64,10 +64,10 @@ TEST(ThreadPool, runsParalell)
 
     ThreadPool<3> triThreadPool;
     timeAtQueueing = std::chrono::high_resolution_clock::now();
-    triThreadPool.addJob(sleep100ms);
-    triThreadPool.addJob(sleep100ms);
-    triThreadPool.addJob(sleep100ms);
-    lastResult = triThreadPool.addJob(sleep100ms);
+    triThreadPool.add_job(sleep100ms);
+    triThreadPool.add_job(sleep100ms);
+    triThreadPool.add_job(sleep100ms);
+    lastResult = triThreadPool.add_job(sleep100ms);
     lastResult.get();
     timeAtEnd = std::chrono::high_resolution_clock::now();
     elapsedMilliseconds =
@@ -81,14 +81,17 @@ TEST(ThreadPool, hasQueuedJobFlag)
 {
     using namespace std::chrono_literals;
     ThreadPool<1> pool;
-    ASSERT_FALSE(pool.hasQueuedJob());
+    ASSERT_FALSE(pool.has_queued_job());
 
-    pool.addJob([](){std::this_thread::sleep_for(100ms);});
-    auto sleepForAWhile = pool.addJob([](){std::this_thread::sleep_for(100ms); return 2;});
+    pool.add_job([]() { std::this_thread::sleep_for(100ms); });
+    auto sleepForAWhile = pool.add_job([]() {
+        std::this_thread::sleep_for(100ms);
+        return 2;
+    });
 
-    ASSERT_TRUE(pool.hasQueuedJob());
+    ASSERT_TRUE(pool.has_queued_job());
     sleepForAWhile.get();
-    ASSERT_FALSE(pool.hasQueuedJob());
+    ASSERT_FALSE(pool.has_queued_job());
 }
 
 TEST(ThreadPool, gracefulStop)
@@ -101,16 +104,16 @@ TEST(ThreadPool, gracefulStop)
 
         futures.reserve(1000);
         for (auto i = 0u; i < 1000u; ++i) {
-            futures.push_back(pool.addJob([i]() {
+            futures.push_back(pool.add_job([i]() {
                 std::this_thread::sleep_for(1ms);
                 return i;
             }));
         }
 
         pool.stop(true);
-        auto invalidFuture = pool.addJob([]() { return -1; });
+        auto invalidFuture = pool.add_job([]() { return -1; });
         ASSERT_FALSE(invalidFuture.valid());
-        ASSERT_TRUE(pool.hasQueuedJob());
+        ASSERT_TRUE(pool.has_queued_job());
     }
 
     for (auto i = 0u; i < 1000u; ++i) {
