@@ -1,51 +1,140 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(CMAKE_CXX_FLAGS "-Wall -pedantic -Werror -Wextra")
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
+set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -Werror -Wextra)
+set(COMMON_COMPILE_FEATURES cxx_std_17)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/googletest)
 
-project(Core)
+# Project name
+project(Core VERSION 0.0.1 LANGUAGES CXX)
 
-add_library(Core STATIC
-            src/Json.cpp
-            include/Json/Json.hpp
-            include/Json/ValueWrapper.hpp
+include(GNUInstallDirs)
 
-            include/ThreadPool.hpp
-            include/Utils.hpp
-            include/TestUtil.hpp
+### Target Core::Utils
+add_library(Utils INTERFACE)
 
-            include/MessageQueue.hpp
+# We want this to be included with the #include <Core/{...}>
+target_include_directories(Utils INTERFACE
+        $<INSTALL_INTERFACE:include>
+)
+
+### Target Core::Json
+add_library(Json STATIC
+        include/Json/Json.hpp
+        src/Json/Json.cpp
+)
+
+# Until this has more files this is installed as a single header
+list(APPEND Json_FILES
+        include/Json/Json.hpp
+)
+
+# Compile options
+target_compile_options(Json PRIVATE ${COMMON_COMPILE_OPTIONS})
+target_compile_features(Json PUBLIC ${COMMON_COMPILE_FEATURES})
+
+set_target_properties(Json PROPERTIES
+        LANGUAGE CXX
+        LINKER_LANGUAGE CXX
+)
+
+# Include dirs
+target_include_directories(Json
+        PUBLIC
+            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/Json>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        PRIVATE
+            $<INSTALL_INTERFACE:include/Core>
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/Json
+)
+
+target_link_libraries(Json PUBLIC Utils)
+
+### Target Core::ThreadPool
+add_library(ThreadPool INTERFACE)
+
+# Until this has more files this is installed as a single header
+list(APPEND CoreThreadPool_FILES
+        include/ThreadPool/ThreadPool.hpp
+)
+
+target_include_directories(ThreadPool
+        INTERFACE
+            $<INSTALL_INTERFACE:include>
+)
+
+### Target Core::MessageQueue
+add_library(MessageQueue INTERFACE)
+
+# Until this has more files this is installed as a single header
+list(APPEND CoreMessagePool_FILES
+        include/MessageQueue/MessageQueue.hpp
+)
+
+target_include_directories(MessageQueue
+        INTERFACE
+            $<INSTALL_INTERFACE:include>
+)
+
+# Install steps
+install(TARGETS Utils Json ThreadPool MessageQueue
+        EXPORT core-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(FILES ${Json_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY include/Utils  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${CoreThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${CoreMessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+
+# Export targets
+install(EXPORT core-targets
+        FILE
+        CoreTargets.cmake
+        NAMESPACE
+        Core::
+        DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}/cmake/Core
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/CoreConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfig.cmake
+        INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+export(EXPORT core-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/CoreTargets.cmake NAMESPACE Core::)
+
+#export(PACKAGE Json)
+#export(PACKAGE Utils)
+#export(PACKAGE ThreadPool)
+#export(PACKAGE MessageQueue)
+export(PACKAGE Core)
+
+configure_file(Core.pc.in Core.pc @ONLY)
+
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/CoreConfigVersion.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
 )
 
 option(PACKAGE_TESTS "Build the tests" ON)
 if(PACKAGE_TESTS)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern/googletest)
+
     enable_testing()
     add_subdirectory(tests)
 endif()
-
-#set_target_properties(Core
-#        PROPERTIES
-#            FRAMEWORK
-#            VERSION
-#                ${PROJECT_VERSION}
-#            PUBLIC_HEADER
-#                include/MessageQueue.hpp
-#                include/Json/Json.hpp
-#                include/ThreadPool.hpp
-#                1.0.0)
-
-configure_file(Core.pc.in Core.pc @ONLY)
-
-target_include_directories(Core PRIVATE include)
-
-install(TARGETS Core 
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if(CREATE_DOCS)
     find_package(Doxygen

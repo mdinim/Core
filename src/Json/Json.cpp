@@ -2,7 +2,7 @@
 // Created by Dániel Molnár on 2019-03-07.
 //
 
-#include "Json/Json.hpp"
+#include "Json.hpp"
 #include <cctype>
 #include <stack>
 #include <string_view>
@@ -11,7 +11,7 @@
 #include <iostream>
 #include <list>
 
-#include <Utils.hpp>
+#include <Utils/Utils.hpp>
 
 namespace Core {
 
