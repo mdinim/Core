@@ -175,7 +175,7 @@ public:
 
         auto task = std::make_shared<std::packaged_task<ResultTypeOfCallable<Callable, Args...>(Args...)>>(job);
 
-        auto wrappedJob = [this, task, args = std::make_tuple(std::forward<Args>(args)...)]() {
+        auto wrappedJob = [task, args = std::make_tuple(std::forward<Args>(args)...)]() {
             std::apply(*task, args);
         };
 
