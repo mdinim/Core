@@ -43,26 +43,26 @@ private:
         std::shared_ptr<std::atomic_bool> _stopped = std::make_shared<std::atomic_bool>(false);
 
         /// \brief After stopping the worker if this is true, the worker does not stop until the queue is cleared.
-        std::shared_ptr<std::atomic_bool> _clearQueue = std::make_shared<std::atomic_bool>(false);
+        std::shared_ptr<std::atomic_bool> _clear_queue = std::make_shared<std::atomic_bool>(false);
 
         /// \brief Static loop function that actually is executed on the worker threads
-        static void mainLoop (std::shared_ptr<std::atomic_bool> stopped, std::shared_ptr<std::atomic_bool> clearQueue,
-                    std::shared_ptr<JobQueue> queue,
-                    std::shared_ptr<std::shared_mutex> queueGuard,
-                    std::shared_ptr<std::condition_variable_any> hasJobOrStopped) {
-            auto hasJob = [queue, queueGuard] () {
-                std::shared_lock queueLock(*queueGuard);
+        static void main_loop(std::shared_ptr<std::atomic_bool> stopped, std::shared_ptr<std::atomic_bool> clear_queue,
+                              std::shared_ptr<JobQueue> queue,
+                              std::shared_ptr<std::shared_mutex> queue_guard,
+                              std::shared_ptr<std::condition_variable_any> has_job_or_stopped) {
+            auto has_job = [queue, queue_guard] () {
+                std::shared_lock queueLock(*queue_guard);
                 return !queue->empty();
             };
-            while(!*stopped || (*clearQueue && hasJob())) {
+            while(!*stopped || (*clear_queue && has_job())) {
                 std::optional<WrappedJob> job;
                 {
-                    std::unique_lock queueLock(*queueGuard);
-                    hasJobOrStopped->wait(queueLock, [&stopped, &queue]() {
+                    std::unique_lock queue_lock(*queue_guard);
+                    has_job_or_stopped->wait(queue_lock, [&stopped, &queue]() {
                         return *stopped || !queue->empty();
                     });
 
-                    if (*stopped && (!*clearQueue || queue->empty())) {
+                    if (*stopped && (!*clear_queue || queue->empty())) {
                         break;
                     }
 
@@ -78,11 +78,11 @@ private:
         }
     public:
         /// \brief Construct an empty worker (with nothing to do)
-        Worker(std::shared_ptr<JobQueue> queue, std::shared_ptr<std::shared_mutex> queueGuard,
-                std::shared_ptr<std::condition_variable_any> hasJobOrStopped)
+        Worker(std::shared_ptr<JobQueue> queue, std::shared_ptr<std::shared_mutex> queue_guard,
+                std::shared_ptr<std::condition_variable_any> has_job_or_stopped)
         {
-            _thread = std::thread(std::bind(&Worker::mainLoop, _stopped, _clearQueue,
-                    queue, queueGuard, hasJobOrStopped));
+            _thread = std::thread(std::bind(&Worker::main_loop, _stopped, _clear_queue,
+                    queue, queue_guard, has_job_or_stopped));
         }
 
         /// \brief Destruct the instance of the worker
@@ -111,7 +111,7 @@ private:
         /// \param graceful keep the worker active until the job queue is cleared.
         void stop(bool graceful = false) {
             *_stopped = true;
-            *_clearQueue = graceful;
+            *_clear_queue = graceful;
         }
     };
 
@@ -119,23 +119,23 @@ private:
     std::vector<std::unique_ptr<Worker>> _workers;
 
     /// \brief Guard for the job queue.
-    std::shared_ptr<std::shared_mutex> _queueGuard = std::make_shared<std::shared_mutex>();
+    std::shared_ptr<std::shared_mutex> _queue_guard = std::make_shared<std::shared_mutex>();
 
     /// \brief Container for the job queues.
-    std::shared_ptr<JobQueue> _jobQueue = std::make_shared<JobQueue>();
+    std::shared_ptr<JobQueue> _queue = std::make_shared<JobQueue>();
 
     /// \brief Flag if the pool is running
     std::atomic_bool _stopped = false;
 
     /// \brief Condition variable to wait for stopping or jobs.
-    std::shared_ptr<std::condition_variable_any> hasJobOrStopped = std::make_shared<std::condition_variable_any>();
+    std::shared_ptr<std::condition_variable_any> has_job_or_stopped = std::make_shared<std::condition_variable_any>();
 public:
     /// \brief Construct the thread pool.
     /// Launches its pooling thread.
     ThreadPool() {
         _workers.reserve(N);
         for(unsigned i = 0; i < N; ++i) {
-            _workers.emplace_back(std::make_unique<Worker>(_jobQueue, _queueGuard, hasJobOrStopped));
+            _workers.emplace_back(std::make_unique<Worker>(_queue, _queue_guard, has_job_or_stopped));
         }
     }
 
@@ -143,7 +143,7 @@ public:
     /// Does not wait for its Workers to finish, does not clears its job queue first.
     ~ThreadPool() {
         _workers.clear();
-        hasJobOrStopped->notify_all();
+        has_job_or_stopped->notify_all();
     }
 
     /// \brief Stop the thread pool.
@@ -154,13 +154,13 @@ public:
             worker->stop(graceful);
         }
 
-        hasJobOrStopped->notify_all();
+        has_job_or_stopped->notify_all();
     }
 
     /// \brief Checks if it has any job waiting for a Worker.
-    bool hasQueuedJob() const {
-        std::shared_lock lock(*_queueGuard);
-        return !_jobQueue->empty();
+    bool has_queued_job() const {
+        std::shared_lock lock(*_queue_guard);
+        return !_queue->empty();
     }
 
     /// \brief Add a job.
@@ -168,22 +168,22 @@ public:
     /// \param args parameters the callable should be invoked with.
     /// \returns std::future that'll get the result if its done.
     template<class Callable, class... Args>
-    auto addJob(Callable job, Args ...args) -> std::future<ResultTypeOfCallable<Callable, Args...>> {
+    auto add_job(Callable job, Args ...args) -> std::future<ResultTypeOfCallable<Callable, Args...>> {
         if (_stopped) {
             return {};
         }
 
         auto task = std::make_shared<std::packaged_task<ResultTypeOfCallable<Callable, Args...>(Args...)>>(job);
 
-        auto wrappedJob = [task, args = std::make_tuple(std::forward<Args>(args)...)]() {
+        auto wrapped_job = [task, args = std::make_tuple(std::forward<Args>(args)...)]() {
             std::apply(*task, args);
         };
 
         {
-            std::unique_lock lock(*_queueGuard);
-            _jobQueue->push(wrappedJob);
+            std::unique_lock lock(*_queue_guard);
+            _queue->push(wrapped_job);
         }
-        hasJobOrStopped->notify_one();
+        has_job_or_stopped->notify_one();
 
         return task->get_future();
     }
