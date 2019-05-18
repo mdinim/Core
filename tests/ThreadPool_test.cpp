@@ -7,7 +7,7 @@
 #include <thread>
 #include <chrono>
 
-#include "ThreadPool/ThreadPool.hpp"
+#include <ThreadPool/ThreadPool.hpp>
 
 using namespace Core;
 
