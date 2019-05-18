@@ -3,7 +3,7 @@
 //
 
 #include <MessageQueue/MessageQueue.hpp>
-#include <TestUtil.hpp>
+#include <Utils/TestUtil.hpp>
 
 #include <gtest/gtest.h>
 

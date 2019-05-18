@@ -11,7 +11,7 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 package_add_test(Test_MessageQueue MessageQueue_test.cpp)
-target_link_libraries(Test_MessageQueue MessageQueue)
+target_link_libraries(Test_MessageQueue MessageQueue Utils)
 
 package_add_test(Test_ThreadPool ThreadPool_test.cpp)
 target_link_libraries(Test_ThreadPool ThreadPool)

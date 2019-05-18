@@ -5,6 +5,7 @@ set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
 set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -Werror -Wextra)
 set(COMMON_COMPILE_FEATURES cxx_std_17)
 
+
 # Project name
 project(Core VERSION 0.0.1 LANGUAGES CXX)
 
@@ -12,11 +13,6 @@ include(GNUInstallDirs)
 
 ### Target Core::Utils
 add_library(Utils INTERFACE)
-
-# Until this has more files this is installed as a single header
-list(APPEND CoreUtils_FILES
-        include/Utils/Utils.hpp
-)
 
 # We want this to be included with the #include <Core/{...}>
 target_include_directories(Utils INTERFACE
@@ -27,7 +23,11 @@ target_include_directories(Utils INTERFACE
 add_library(Json STATIC
         include/Json/Json.hpp
         src/Json/Json.cpp
-        src/Json/ValueWrapper.hpp
+)
+
+# Until this has more files this is installed as a single header
+list(APPEND Json_FILES
+        include/Json/Json.hpp
 )
 
 # Compile options
@@ -44,12 +44,13 @@ target_include_directories(Json
         PUBLIC
             $<INSTALL_INTERFACE:include>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/Json>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/Utils>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         PRIVATE
+            $<INSTALL_INTERFACE:include/Core>
             ${CMAKE_CURRENT_SOURCE_DIR}/src/Json
 )
 
-target_link_libraries(Json PRIVATE Utils)
+target_link_libraries(Json PUBLIC Utils)
 
 ### Target Core::ThreadPool
 add_library(ThreadPool INTERFACE)
@@ -84,8 +85,8 @@ install(TARGETS Utils Json ThreadPool MessageQueue
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-install(DIRECTORY include/Json DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${CoreUtils_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${Json_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY include/Utils  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(FILES ${CoreThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(FILES ${CoreMessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 
@@ -113,10 +114,11 @@ configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/CoreConfig.cmake.i
 
 export(EXPORT core-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/CoreTargets.cmake NAMESPACE Core::)
 
-export(PACKAGE Json)
-export(PACKAGE Utils)
-export(PACKAGE ThreadPool)
-export(PACKAGE MessageQueue)
+#export(PACKAGE Json)
+#export(PACKAGE Utils)
+#export(PACKAGE ThreadPool)
+#export(PACKAGE MessageQueue)
+export(PACKAGE Core)
 
 configure_file(Core.pc.in Core.pc @ONLY)
 
