@@ -42,11 +42,11 @@ public:
         return std::holds_alternative<T>(*this) && std::get<T>(*this) == value;
     }
 
-    std::variant<Types...>& toStdVariant() {
+    std::variant<Types...>& to_std_variant() {
         return *this;
     }
 
-    const std::variant<Types...>& toStdVariant() const {
+    const std::variant<Types...>& to_std_variant() const {
         return *this;
     }
 

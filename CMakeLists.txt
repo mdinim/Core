@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
-set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -Werror -Wextra)
+set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -pedantic-errors -Werror -Wextra)
 set(COMMON_COMPILE_FEATURES cxx_std_17)
 
 

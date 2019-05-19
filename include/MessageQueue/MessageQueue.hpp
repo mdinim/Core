@@ -55,10 +55,10 @@ private:
     };
 
     /// \brief Guards the priority queue.
-    mutable std::mutex _queueGuard;
+    mutable std::mutex _queue_guard;
 
     /// \brief Condition variable to have the ability for users to wait for the next message.
-    mutable std::condition_variable conditionVariable;
+    mutable std::condition_variable condition_variable;
 
     /// \brief Container of the messages.
     std::priority_queue<MessageType> _queue;
@@ -86,23 +86,23 @@ public:
     /// \brief Queue messages with explicit pre-defined \param priority.
     template<class ...Args>
     void push(MessagePriority priority, Args &&... args) {
-        std::unique_lock guard(_queueGuard);
+        std::unique_lock guard(_queue_guard);
         _queue.emplace(static_cast<unsigned>(priority), std::forward<Args>(args)...);
-        conditionVariable.notify_one();
+        condition_variable.notify_one();
     }
 
     /// \brief Queue messages with arbitrary \param priority.
     template<class ...Args>
     void push(unsigned priority, Args &&... args) {
-        std::unique_lock guard(_queueGuard);
+        std::unique_lock guard(_queue_guard);
         _queue.emplace(priority, std::forward<Args>(args)...);
-        conditionVariable.notify_one();
+        condition_variable.notify_one();
     }
 
     /// \brief Retreive the highest-priority message.
     /// \returns The content of the message.
     MessageContent take() {
-        std::unique_lock guard(_queueGuard);
+        std::unique_lock guard(_queue_guard);
 
         auto message = _queue.top();
         _queue.pop();
@@ -110,9 +110,9 @@ public:
     }
 
     /// \brief Suspend the thread until the next message arrives.
-    void waitForMessage() const {
-        std::unique_lock guard(_queueGuard);
-        conditionVariable.wait(guard, [this]() {
+    void wait_for_message() const {
+        std::unique_lock guard(_queue_guard);
+        condition_variable.wait(guard, [this]() {
             return !empty();
         });
     }
