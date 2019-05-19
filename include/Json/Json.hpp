@@ -149,7 +149,7 @@ private:
                 );
 
             // Visit the next one
-            visit_variant(data.get().toStdVariant(), [&prop_list, &value](Json &json) {
+            visit_variant(data.get().to_std_variant(), [&prop_list, &value](Json &json) {
                 json._set(prop_list, value);
             }, [](const auto&) {
                 // should never happen
