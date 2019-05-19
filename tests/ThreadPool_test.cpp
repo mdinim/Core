@@ -111,7 +111,7 @@ TEST(ThreadPool, prioritized_tasks)
         };
     };
 
-    // First job takes 50 ms, pour a bunch of prioritized jobs in.
+    // First job takes a while, pour a bunch of prioritized jobs in.
     std::vector<std::future<void>> futures;
 
     priority = static_cast<unsigned>(JobPriority::Low);
