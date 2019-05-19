@@ -10,6 +10,7 @@
 #include <ThreadPool/ThreadPool.hpp>
 
 using namespace Core;
+using namespace std::chrono_literals;
 
 class Functor
 {
@@ -24,80 +25,130 @@ std::string foo() {
     return "Hello World!";
 }
 
-TEST(ThreadPool, canBeConstructed)
+auto sleep_for = [](std::chrono::milliseconds dur) {
+    return [dur]() {
+        std::this_thread::sleep_for(dur);
+    };
+};
+
+TEST(ThreadPool, can_be_constructed)
 {
     ThreadPool<10> pool;
     ASSERT_FALSE(pool.has_queued_job());
 }
 
-TEST(ThreadPool, resultCanBeRetrieved)
+TEST(ThreadPool, result_can_be_retrieved)
 {
     ThreadPool<5> pool;
 
-    auto intResult = pool.add_job([]() { return 1; });
-    auto stringResult = pool.add_job(foo);
-    auto doubleResult = pool.add_job(Functor(), 1, "");
+    auto int_result = pool.add_job([]() { return 1; });
+    auto string_result = pool.add_job(foo);
+    auto double_result = pool.add_job(Functor(), 1, "");
 
-    ASSERT_EQ(intResult.get(), 1);
-    ASSERT_EQ(stringResult.get(), "Hello World!");
-    ASSERT_EQ(doubleResult.get(), .012);
+    ASSERT_EQ(int_result.get(), 1);
+    ASSERT_EQ(string_result.get(), "Hello World!");
+    ASSERT_EQ(double_result.get(), .012);
 }
 
-TEST(ThreadPool, runsParalell)
+TEST(ThreadPool, runs_parallel)
 {
-    using namespace std::chrono_literals;
-    auto sleep100ms = []() {
-        std::this_thread::sleep_for(100ms);
-    };
+    auto sleep_100ms = sleep_for(100ms);
 
-    ThreadPool<1> singleThreadPool;
-    auto timeAtQueueing = std::chrono::high_resolution_clock::now();
-    singleThreadPool.add_job(sleep100ms);
-    singleThreadPool.add_job(sleep100ms);
-    auto lastResult = singleThreadPool.add_job(sleep100ms);
-    lastResult.get();
-    auto timeAtEnd = std::chrono::high_resolution_clock::now();
-    auto elapsedMilliseconds =
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeAtEnd - timeAtQueueing).count();
+    ThreadPool<1> single_thread_pool;
+    auto time_at_start = std::chrono::high_resolution_clock::now();
+    single_thread_pool.add_job(sleep_100ms);
+    single_thread_pool.add_job(sleep_100ms);
+    auto last_result = single_thread_pool.add_job(sleep_100ms);
+    last_result.get();
+    auto time_at_end = std::chrono::high_resolution_clock::now();
+    auto elapsed_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(time_at_end - time_at_start).count();
 
-    ASSERT_GE(elapsedMilliseconds, 300);
+    ASSERT_GE(elapsed_ms, 300);
 
-    ThreadPool<3> triThreadPool;
-    timeAtQueueing = std::chrono::high_resolution_clock::now();
-    triThreadPool.add_job(sleep100ms);
-    triThreadPool.add_job(sleep100ms);
-    triThreadPool.add_job(sleep100ms);
-    lastResult = triThreadPool.add_job(sleep100ms);
-    lastResult.get();
-    timeAtEnd = std::chrono::high_resolution_clock::now();
-    elapsedMilliseconds =
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeAtEnd - timeAtQueueing).count();
+    ThreadPool<3> tri_thread_pool;
+    time_at_start = std::chrono::high_resolution_clock::now();
+    tri_thread_pool.add_job(sleep_100ms);
+    tri_thread_pool.add_job(sleep_100ms);
+    tri_thread_pool.add_job(sleep_100ms);
+    last_result = tri_thread_pool.add_job(JobPriority::Low, sleep_100ms);
+    last_result.wait();
+    time_at_end = std::chrono::high_resolution_clock::now();
+    elapsed_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(time_at_end - time_at_start).count();
 
-    ASSERT_GE(elapsedMilliseconds, 200);
-    ASSERT_LE(elapsedMilliseconds, 220);
+    ASSERT_GE(elapsed_ms, 200);
+    ASSERT_LE(elapsed_ms, 220);
 }
 
-TEST(ThreadPool, hasQueuedJobFlag)
+TEST(ThreadPool, has_queued_job_flag)
 {
-    using namespace std::chrono_literals;
     ThreadPool<1> pool;
     ASSERT_FALSE(pool.has_queued_job());
 
-    pool.add_job([]() { std::this_thread::sleep_for(100ms); });
-    auto sleepForAWhile = pool.add_job([]() {
+    pool.add_job(sleep_for(100ms));
+    auto slept_future = pool.add_job([]() {
         std::this_thread::sleep_for(100ms);
         return 2;
     });
 
     ASSERT_TRUE(pool.has_queued_job());
-    sleepForAWhile.get();
+    slept_future.get();
     ASSERT_FALSE(pool.has_queued_job());
 }
 
-TEST(ThreadPool, gracefulStop)
+TEST(ThreadPool, prioritized_tasks)
 {
-    using namespace std::chrono_literals;
+    ThreadPool<1> pool;
 
+    std::vector<unsigned> results;
+    auto first_job = pool.add_job(sleep_for(100ms));
+
+    unsigned priority = 0;
+    auto get_prio_job = [&results, &priority]() {
+        return  [&results, priority]() {
+            results.push_back(priority);
+        };
+    };
+
+    // First job takes a while, pour a bunch of prioritized jobs in.
+    std::vector<std::future<void>> futures;
+
+    priority = static_cast<unsigned>(JobPriority::Low);
+    futures.push_back(pool.add_job(priority, get_prio_job()));
+
+    priority = static_cast<unsigned>(JobPriority::High);
+    futures.push_back(pool.add_job(priority, get_prio_job()));
+
+    priority = static_cast<unsigned>(JobPriority::Normal);
+    futures.push_back(pool.add_job(priority, get_prio_job()));
+
+    priority = static_cast<unsigned>(JobPriority::High) + 1;
+    futures.push_back(pool.add_job(priority, get_prio_job()));
+
+    priority = static_cast<unsigned>(JobPriority::Normal) + 1;
+    futures.push_back(pool.add_job(priority, get_prio_job()));
+
+    // wait for the rest to start
+    first_job.wait();
+
+    for(const auto& future : futures) {
+        future.wait();
+    }
+    ASSERT_FALSE(pool.has_queued_job());
+
+    // if all went well, the jobs ran in order of their priority, not in the order they were queued in
+    // the results vector should be sorted backwards.
+    std::stringstream result_str;
+    for(const auto& result : results)
+         result_str << result << " ";
+    TEST_INFO << "Priority order of results: " << result_str.str() << std::endl;
+
+    ASSERT_TRUE(std::is_sorted(results.begin(), results.end(), std::greater<>()));
+}
+
+TEST(ThreadPool, graceful_stop)
+{
     std::vector<std::future<unsigned>> futures;
     {
         ThreadPool<5> pool;
