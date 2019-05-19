@@ -661,7 +661,7 @@ void Json::print(std::ostream& os, unsigned& tab_count) const {
             tab_count++;
             for(const auto& value : array) {
                 printTabs();
-                visit_variant(value.toStdVariant(), valueVisitor);
+                visit_variant(value.to_std_variant(), valueVisitor);
                 if(++i != array.size())
                     os << ",";
                 os << std::endl;
@@ -675,7 +675,7 @@ void Json::print(std::ostream& os, unsigned& tab_count) const {
             for(const auto& [key, value] : object) {
                 printTabs();
                 os << key << ": ";
-                visit_variant(value.toStdVariant(), valueVisitor);
+                visit_variant(value.to_std_variant(), valueVisitor);
                 if(++i != object.size())
                     os << ",";
                 os << std::endl;
