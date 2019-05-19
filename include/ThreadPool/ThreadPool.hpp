@@ -168,6 +168,10 @@ public:
         has_job_or_stopped->notify_all();
     }
 
+    // Non-copyable
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
+
     /// \brief Stop the thread pool.
     /// \param waitForQueuedJobs decides whether or not clear ist job queue before finishing.
     void stop(bool graceful = false) {

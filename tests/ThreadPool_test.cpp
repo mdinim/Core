@@ -10,6 +10,7 @@
 #include <ThreadPool/ThreadPool.hpp>
 
 using namespace Core;
+using namespace std::chrono_literals;
 
 class Functor
 {
@@ -51,7 +52,6 @@ TEST(ThreadPool, result_can_be_retrieved)
 
 TEST(ThreadPool, runs_parallel)
 {
-    using namespace std::chrono_literals;
     auto sleep_100ms = sleep_for(100ms);
 
     ThreadPool<1> single_thread_pool;
@@ -83,7 +83,6 @@ TEST(ThreadPool, runs_parallel)
 
 TEST(ThreadPool, has_queued_job_flag)
 {
-    using namespace std::chrono_literals;
     ThreadPool<1> pool;
     ASSERT_FALSE(pool.has_queued_job());
 
@@ -100,8 +99,6 @@ TEST(ThreadPool, has_queued_job_flag)
 
 TEST(ThreadPool, prioritized_tasks)
 {
-    using namespace std::chrono_literals;
-
     ThreadPool<1> pool;
 
     std::vector<unsigned> results;
@@ -152,8 +149,6 @@ TEST(ThreadPool, prioritized_tasks)
 
 TEST(ThreadPool, graceful_stop)
 {
-    using namespace std::chrono_literals;
-
     std::vector<std::future<unsigned>> futures;
     {
         ThreadPool<5> pool;
