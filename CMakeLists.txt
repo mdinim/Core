@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
 set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -pedantic-errors -Werror -Wextra)
 set(COMMON_COMPILE_FEATURES cxx_std_17)
 
+macro(add_common_compiler_options TARGET_NAME)
+    target_compile_options(${TARGET_NAME} PRIVATE ${COMMON_COMPILE_OPTIONS}
+            $<$<CONFIG:DEBUG>:-O0>
+            $<$<CONFIG:RELEASE>:-O3>
+            $<$<BOOL:${CREATE_COVERAGE_REPORT}>:-O0>
+            $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<CXX_COMPILER_ID:GNU>>:--coverage>
+            $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:Clang>>>:-fprofile-instr-generate -fcoverage-mapping>
+    )
+endmacro()
 
 # Project name
 project(Core VERSION 0.0.1 LANGUAGES CXX)
@@ -30,8 +38,13 @@ list(APPEND Json_FILES
         include/Json/Json.hpp
 )
 
+list(APPEND Json_SRC_FILES
+        src/Json/Json.cpp
+)
+
 # Compile options
-target_compile_options(Json PRIVATE ${COMMON_COMPILE_OPTIONS})
+add_common_compiler_options(Json)
+
 target_compile_features(Json PUBLIC ${COMMON_COMPILE_FEATURES})
 
 set_target_properties(Json PROPERTIES
@@ -50,7 +63,9 @@ target_include_directories(Json
             ${CMAKE_CURRENT_SOURCE_DIR}/src/Json
 )
 
-target_link_libraries(Json PUBLIC Utils)
+# gcov works for clang as well
+target_link_libraries(Json PUBLIC Utils
+    $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<CXX_COMPILER_ID:GNU>>:gcov>)
 
 ### Target Core::ThreadPool
 add_library(ThreadPool INTERFACE)
