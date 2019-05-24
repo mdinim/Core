@@ -27,6 +27,12 @@ target_include_directories(Utils INTERFACE
         $<INSTALL_INTERFACE:include>
 )
 
+list(APPEND Utils_FILES 
+        include/Utils/TestUtil.hpp
+        include/Utils/Utils.hpp
+        include/Utils/ValueWrapper.hpp
+)
+
 ### Target Core::Json
 add_library(Json STATIC
         include/Json/Json.hpp
@@ -71,7 +77,7 @@ target_link_libraries(Json PUBLIC Utils
 add_library(ThreadPool INTERFACE)
 
 # Until this has more files this is installed as a single header
-list(APPEND CoreThreadPool_FILES
+list(APPEND ThreadPool_FILES
         include/ThreadPool/ThreadPool.hpp
 )
 
@@ -84,7 +90,7 @@ target_include_directories(ThreadPool
 add_library(MessageQueue INTERFACE)
 
 # Until this has more files this is installed as a single header
-list(APPEND CoreMessagePool_FILES
+list(APPEND MessageQueue_FILES
         include/MessageQueue/MessageQueue.hpp
 )
 
@@ -102,8 +108,8 @@ install(TARGETS Utils Json ThreadPool MessageQueue
 
 install(FILES ${Json_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(DIRECTORY include/Utils  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${CoreThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${CoreMessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${ThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${MessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 
 # Export targets
 install(EXPORT core-targets
