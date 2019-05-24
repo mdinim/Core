@@ -102,7 +102,7 @@ TEST(ThreadPool, prioritized_tasks)
     ThreadPool<1> pool;
 
     std::vector<unsigned> results;
-    auto first_job = pool.add_job(sleep_for(150ms));
+    auto first_job = pool.add_job(sleep_for(200ms));
 
     unsigned priority = 0;
     auto get_prio_job = [&results, &priority]() {

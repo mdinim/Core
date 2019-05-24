@@ -1,6 +1,7 @@
 stages:
     - build
     - test
+    - deploy
 
 image: gcc
 
@@ -32,3 +33,15 @@ test:
         - cd build
         - ctest . -V --repeat-until-fail 10
 
+coverage:
+    stage: deploy
+    script:
+        - apt-get update -qq && apt-get install -y -qq python3-pip
+        - pip3 install cmake --upgrade
+        - apt-get update -qq && apt-get install -y -qq python3-pip
+        - pip3 install cmake gcov lcov --upgrade
+        - cmake --build -DCREATE_COVERAGE_REPORT=ON
+        - cd build
+        - cmake --build . --target Overall_coverage_preproc
+    artefacts:
+        - build/Overall_coverage/coverage.info
