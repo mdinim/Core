@@ -43,5 +43,5 @@ coverage:
         - cmake --build -DCREATE_COVERAGE_REPORT=ON
         - cd build
         - cmake --build . --target Overall_coverage_preproc
-    artefacts:
+    artifacts:
         - build/Overall_coverage/coverage.info
