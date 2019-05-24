@@ -3,7 +3,7 @@ stages:
     - test
     - deploy
 
-image: gcc
+image: gcc:8.3
 
 build:
     stage: build
