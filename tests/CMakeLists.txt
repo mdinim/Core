@@ -74,6 +74,7 @@ function(generate_overall_coverage_report)
                 COMMAND mkdir -p ${COVERAGE_LOCATION}
                 COMMAND $<TARGET_FILE:${TEST_TARGET_NAME}>
                 COMMAND lcov -c
+                     --base-diractory .
                      --directory $<TARGET_FILE_DIR:${TEST_TARGET_NAME}>
                      --directory $<TARGET_FILE_DIR:Json>
                      --output-file ${COVERAGE_LOCATION}/coverage.info --rc lcov_branch_coverage=1
