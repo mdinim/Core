@@ -44,4 +44,7 @@ coverage:
         - cd build
         - cmake --build . --target Overall_coverage_preproc
     artifacts:
-        - build/Overall_coverage/coverage.info
+        paths:
+            - build/
+        expire_in: 15 minutes
+
