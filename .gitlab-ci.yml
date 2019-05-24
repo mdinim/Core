@@ -38,7 +38,7 @@ coverage:
     script:
         - apt-get update -qq && apt-get install -y -qq python3-pip
         - pip3 install cmake --upgrade
-        - apt-get update -qq && apt-get install -y -qq python3-pip gcov lcov 
+        - apt-get update -qq && apt-get install -y -qq python3-pip lcov 
         - pip3 install cmake --upgrade
         - cmake --build -DCREATE_COVERAGE_REPORT=ON
         - cd build
