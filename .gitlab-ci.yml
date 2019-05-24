@@ -40,9 +40,9 @@ coverage:
         - pip3 install cmake --upgrade
         - apt-get update -qq && apt-get install -y -qq python3-pip lcov 
         - pip3 install cmake --upgrade
-        - mkdir build
+        - mkdir coverage 
+        - cd coverage 
         - cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCREATE_COVERAGE_REPORT=ON
-        - cd build
         - cmake --build . --target Overall_coverage_preproc
     artifacts:
         paths:
