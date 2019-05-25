@@ -42,14 +42,17 @@ coverage:
         - pip3 install cmake --upgrade
         - mkdir coverage 
         - cd coverage 
-        - curl https://liquidtelecom.dl.sourceforge.net/project/ltp/Coverage%20Analysis/LCOV-1.14/lcov-1.14-1.noarch.rpm --output lcov.noarch.rpm
+        - curl $LCOV_DOWNLOAD_PATH --output lcov.noarch.rpm
         - alien -i lcov.noarch.rpm
         - gcov -v
         - lcov -v
         - cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCREATE_COVERAGE_REPORT=ON
         - cmake --build . --target Overall_coverage_preproc
+    after-script:
+        - echo $CODECOV_TOKEN
+        # bash <(curl -s https://codecov.io/bash) -f coverage/Overall_coverage/coverage.info -t $CODECOV_TOKEN
     artifacts:
         paths:
-            - build/Overall_coverage/coverage.info
+            - coverage/Overall_coverage/coverage.info
         expire_in: 15 minutes
 
