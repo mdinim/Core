@@ -49,8 +49,7 @@ coverage:
         - cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCREATE_COVERAGE_REPORT=ON
         - cmake --build . --target Overall_coverage_preproc
     after_script:
-        - echo $CODECOV_TOKEN
-        # bash <(curl -s https://codecov.io/bash) -f coverage/Overall_coverage/coverage.info -t $CODECOV_TOKEN
+        - bash <(curl -s https://codecov.io/bash) -f coverage/Overall_coverage/coverage.info -t $CODECOV_TOKEN
     artifacts:
         paths:
             - coverage/Overall_coverage/coverage.info
