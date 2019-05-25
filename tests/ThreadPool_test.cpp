@@ -102,7 +102,7 @@ TEST(ThreadPool, prioritized_tasks)
     ThreadPool<1> pool;
 
     std::vector<unsigned> results;
-    auto first_job = pool.add_job(sleep_for(100ms));
+    auto first_job = pool.add_job(sleep_for(200ms));
 
     unsigned priority = 0;
     auto get_prio_job = [&results, &priority]() {
@@ -162,7 +162,9 @@ TEST(ThreadPool, graceful_stop)
         }
 
         pool.stop(true);
-        auto invalidFuture = pool.add_job([]() { return -1; });
+        auto invalidFuture = pool.add_job([]() {
+            return -1;
+        });
         ASSERT_FALSE(invalidFuture.valid());
         ASSERT_TRUE(pool.has_queued_job());
     }
