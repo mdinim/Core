@@ -46,8 +46,8 @@ coverage:
         - alien -i lcov.noarch.rpm
         - gcov -v
         - lcov -v
-        # cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCREATE_COVERAGE_REPORT=ON
-        # cmake --build . --target Overall_coverage_preproc
+        - cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCREATE_COVERAGE_REPORT=ON
+        - cmake --build . --target Overall_coverage_preproc
     artifacts:
         paths:
             - build/Overall_coverage/coverage.info
