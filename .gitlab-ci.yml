@@ -3,6 +3,7 @@ stages:
     - test
     - deploy
 
+# explicit version is required to have the compatibility between lcov and gcov
 image: gcc:8.3
 
 build:
@@ -42,6 +43,7 @@ coverage:
         - pip3 install cmake --upgrade
         - mkdir coverage 
         - cd coverage 
+        # Manually download the RPM, apt does not contain the correct version
         - curl $LCOV_DOWNLOAD_PATH --output lcov.noarch.rpm
         - alien -i lcov.noarch.rpm
         - gcov -v
