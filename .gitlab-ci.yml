@@ -38,12 +38,12 @@ coverage:
     script:
         - git submodule sync --recursive
         - git submodule update --init --recursive
-        - apt-get update -qq && apt-get install -y -qq python3-pip
-        - pip3 install cmake --upgrade
-        - apt-get update -qq && apt-get install -y -qq python3-pip lcov 
+        - apt-get update -qq && apt-get install -y -qq python3-pip alien
         - pip3 install cmake --upgrade
         - mkdir coverage 
         - cd coverage 
+        - curl https://liquidtelecom.dl.sourceforge.net/project/ltp/Coverage%20Analysis/LCOV-1.14/lcov-1.14-1.noarch.rpm --output lcov.noarch.rpm
+        - alien -i lcov.noarch.rpm
         - gcov -v
         - lcov -v
         # cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCREATE_COVERAGE_REPORT=ON
