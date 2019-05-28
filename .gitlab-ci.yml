@@ -14,7 +14,7 @@ build:
         - apt-get update -qq && apt-get install -y -qq python3-pip
         - gcc -v
         - g++ -v
-        - pip3 install pip --upgrade
+        - python -m pip install --upgrade pip
         - pip3 install cmake --upgrade
         - cmake --version
     script:
@@ -31,6 +31,7 @@ test:
     stage: test
     script:
         - apt-get update -qq && apt-get install -y -qq python3-pip
+        - python -m pip install --upgrade pip
         - pip3 install cmake --upgrade
         - cd build
         - ctest . -V --repeat-until-fail 10
@@ -41,6 +42,7 @@ coverage:
         - git submodule sync --recursive
         - git submodule update --init --recursive
         - apt-get update -qq && apt-get install -y -qq python3-pip alien
+        - python -m pip install --upgrade pip
         - pip3 install cmake --upgrade
         - mkdir coverage 
         - cd coverage 
