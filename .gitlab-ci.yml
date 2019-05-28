@@ -12,6 +12,7 @@ build:
         - apt-get update -qq && apt-get install -y -qq python3-pip
         - gcc -v
         - g++ -v
+        - pip3 install pip3 --upgrade
         - pip3 install cmake --upgrade
         - cmake --version
     script:
