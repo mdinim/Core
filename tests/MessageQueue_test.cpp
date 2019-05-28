@@ -12,74 +12,74 @@
 
 using namespace Core;
 
-TEST(MessageQueue, canBeConstructed)
+TEST(MessageQueue, can_be_constructed)
 {
     MessageQueue<std::string> simpleQueue;
 }
 
-TEST(MessageQueue, canDispatchMessage)
+TEST(MessageQueue, can_dispatch_message)
 {
-    MessageQueue<std::string> simpleQueue;
-    simpleQueue.push("Hey there");
+    MessageQueue<std::string> simple_queue;
+    simple_queue.push("Hey there");
 
-    ASSERT_FALSE(simpleQueue.empty());
+    ASSERT_FALSE(simple_queue.empty());
 }
 
-TEST(MessageQueue, canRetreiveMessage)
+TEST(MessageQueue, can_retrieve_message)
 {
-    MessageQueue<std::string> simpleQueue;
-    simpleQueue.push("Hey there");
+    MessageQueue<std::string> simple_queue;
+    simple_queue.push("Hey there");
 
-    ASSERT_FALSE(simpleQueue.empty());
-    ASSERT_EQ(simpleQueue.take(), "Hey there");
-    ASSERT_TRUE(simpleQueue.empty());
+    ASSERT_FALSE(simple_queue.empty());
+    ASSERT_EQ(simple_queue.take(), "Hey there");
+    ASSERT_TRUE(simple_queue.empty());
 }
 
-TEST(MessageQueue, priorityMatters)
+TEST(MessageQueue, priority_matters)
 {
-    MessageQueue<std::string> simpleQueue;
-    simpleQueue.push(MessagePriority::Low, "!");
-    simpleQueue.push(MessagePriority::High, "Hello");
-    simpleQueue.push("world");
-    simpleQueue.push(static_cast<unsigned>(MessagePriority::Normal) + 1, " ");
+    MessageQueue<std::string> simple_queue;
+    simple_queue.push(MessagePriority::Low, "!");
+    simple_queue.push(MessagePriority::High, "Hello");
+    simple_queue.push("world");
+    simple_queue.push(static_cast<unsigned>(MessagePriority::Normal) + 1, " ");
 
     std::string result;
-    while(!simpleQueue.empty())
+    while(!simple_queue.empty())
     {
-        result += simpleQueue.take();
+        result += simple_queue.take();
     }
     ASSERT_EQ(result, "Hello world!");
 }
 
-TEST(MessageQueue, messagesCanBeWaitedFor)
+TEST(MessageQueue, messages_can_be_waited_for)
 {
     using namespace std::chrono_literals;
 
-    MessageQueue<std::string> simpleQueue;
-    std::thread dispatcherThreadOne([&simpleQueue]() {
+    MessageQueue<std::string> simple_queue;
+    std::thread thread_one([&simple_queue]() {
         std::this_thread::sleep_for(.5s);
-        simpleQueue.push("delayed msg one");
+        simple_queue.push("delayed msg one");
     });
-    std::thread dispatcherThreadTwo([&simpleQueue]() {
+    std::thread thread_two([&simple_queue]() {
         std::this_thread::sleep_for(1s);
-        simpleQueue.push("delayed msg two");
+        simple_queue.push("delayed msg two");
     });
 
-    auto timeAtWait = std::chrono::high_resolution_clock::now();
-    simpleQueue.waitForMessage();
-    simpleQueue.take();
-    auto timeAtWaitEnd = std::chrono::high_resolution_clock::now();
-    auto millisecElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeAtWaitEnd - timeAtWait).count();
+    auto time_at_start = std::chrono::high_resolution_clock::now();
+    simple_queue.wait_for_message();
+    simple_queue.take();
+    auto time_at_end = std::chrono::high_resolution_clock::now();
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(time_at_end - time_at_start).count();
 
-    TEST_INFO << "Elapsed time #1: " << millisecElapsed << " ms" << std::endl;
-    ASSERT_GE(millisecElapsed, 500);
+    TEST_INFO << "Elapsed time #1: " << elapsed_ms << " ms" << std::endl;
+    ASSERT_GE(elapsed_ms, 500);
 
-    simpleQueue.waitForMessage();
-    timeAtWaitEnd = std::chrono::high_resolution_clock::now();
-    millisecElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeAtWaitEnd - timeAtWait).count();
+    simple_queue.wait_for_message();
+    time_at_end = std::chrono::high_resolution_clock::now();
+    elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(time_at_end - time_at_start).count();
 
-    TEST_INFO << "Elapsed time #2: " << millisecElapsed << " ms" << std::endl;
-    ASSERT_GE(millisecElapsed, 1000);
-    dispatcherThreadOne.join();
-    dispatcherThreadTwo.join();
+    TEST_INFO << "Elapsed time #2: " << elapsed_ms << " ms" << std::endl;
+    ASSERT_GE(elapsed_ms, 1000);
+    thread_one.join();
+    thread_two.join();
 }

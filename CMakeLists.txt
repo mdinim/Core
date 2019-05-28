@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
-set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -Werror -Wextra)
+set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -pedantic-errors -Werror -Wextra)
 set(COMMON_COMPILE_FEATURES cxx_std_17)
 
+macro(add_common_compiler_options TARGET_NAME)
+    target_compile_options(${TARGET_NAME} PRIVATE ${COMMON_COMPILE_OPTIONS}
+            $<$<CONFIG:DEBUG>:-O0>
+            $<$<CONFIG:RELEASE>:-O3>
+            $<$<BOOL:${CREATE_COVERAGE_REPORT}>:-O0>
+            $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<CXX_COMPILER_ID:GNU>>:--coverage>
+            $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:Clang>>>:-fprofile-instr-generate -fcoverage-mapping>
+    )
+endmacro()
 
 # Project name
 project(Core VERSION 0.0.1 LANGUAGES CXX)
@@ -19,6 +27,12 @@ target_include_directories(Utils INTERFACE
         $<INSTALL_INTERFACE:include>
 )
 
+list(APPEND Utils_FILES 
+        include/Utils/TestUtil.hpp
+        include/Utils/Utils.hpp
+        include/Utils/ValueWrapper.hpp
+)
+
 ### Target Core::Json
 add_library(Json STATIC
         include/Json/Json.hpp
@@ -30,8 +44,13 @@ list(APPEND Json_FILES
         include/Json/Json.hpp
 )
 
+list(APPEND Json_SRC_FILES
+        src/Json/Json.cpp
+)
+
 # Compile options
-target_compile_options(Json PRIVATE ${COMMON_COMPILE_OPTIONS})
+add_common_compiler_options(Json)
+
 target_compile_features(Json PUBLIC ${COMMON_COMPILE_FEATURES})
 
 set_target_properties(Json PROPERTIES
@@ -50,13 +69,15 @@ target_include_directories(Json
             ${CMAKE_CURRENT_SOURCE_DIR}/src/Json
 )
 
-target_link_libraries(Json PUBLIC Utils)
+# gcov works for clang as well
+target_link_libraries(Json PUBLIC Utils
+    $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<CXX_COMPILER_ID:GNU>>:gcov>)
 
 ### Target Core::ThreadPool
 add_library(ThreadPool INTERFACE)
 
 # Until this has more files this is installed as a single header
-list(APPEND CoreThreadPool_FILES
+list(APPEND ThreadPool_FILES
         include/ThreadPool/ThreadPool.hpp
 )
 
@@ -69,7 +90,7 @@ target_include_directories(ThreadPool
 add_library(MessageQueue INTERFACE)
 
 # Until this has more files this is installed as a single header
-list(APPEND CoreMessagePool_FILES
+list(APPEND MessageQueue_FILES
         include/MessageQueue/MessageQueue.hpp
 )
 
@@ -87,8 +108,8 @@ install(TARGETS Utils Json ThreadPool MessageQueue
 
 install(FILES ${Json_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(DIRECTORY include/Utils  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${CoreThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${CoreMessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${ThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES ${MessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 
 # Export targets
 install(EXPORT core-targets

@@ -10,17 +10,17 @@
 using namespace Core;
 using namespace std::string_literals;
 
-std::string sampleJson = "{\n"
-                          "  \"firstName\": \"John\",\n"
-                          "  \"lastName\": \"Smith\",\n"
+std::string sample_json = "{\n"
+                          "  \"first_name\": \"John\",\n"
+                          "  \"last_name\": \"Smith\",\n"
                           "  \"age\": 25,\n"
                           "  \"address\": {\n"
-                          "    \"streetAddress\": \"21 2nd Street\",\n"
+                          "    \"street_address\": \"21 2nd Street\",\n"
                           "    \"city\": \"New York\",\n"
                           "    \"state\": \"NY\",\n"
-                          "    \"postalCode\": 10021\n"
+                          "    \"postal_code\": 10021\n"
                           "  },\n"
-                          "  \"phoneNumber\": [\n"
+                          "  \"phone_number\": [\n"
                           "    {\n"
                           "      \"type\": \"home\",\n"
                           "      \"number\": \"212 555-1234\"\n"
@@ -35,27 +35,27 @@ std::string sampleJson = "{\n"
                           "  }\n"
                           "}";
 
-TEST(Json, canBeConstructed)
+TEST(Json, can_be_constructed)
 {
-    Json json = Json::createObject();
+    Json json = Json::create_object();
     ASSERT_TRUE(json);
     ASSERT_EQ(json, Json("{}"));
 }
 
-TEST(Json, parsesValuesCorrectly)
+TEST(Json, values_parsed_correctly)
 {
-    Json json(sampleJson);
+    Json json(sample_json);
     ASSERT_TRUE(json);
 
-    auto firstName = json.get<std::string>("firstName");
-    ASSERT_TRUE(firstName);
-    EXPECT_EQ(*firstName, "John");
+    auto first_name = json.get<std::string>("first_name");
+    ASSERT_TRUE(first_name);
+    EXPECT_EQ(*first_name, "John");
 
-    auto lastName = json.get<std::string>("lastName");
-    ASSERT_TRUE(lastName);
-    EXPECT_EQ(*lastName, "Smith");
+    auto last_name = json.get<std::string>("last_name");
+    ASSERT_TRUE(last_name);
+    EXPECT_EQ(*last_name, "Smith");
 
-    EXPECT_FALSE(json.get<int>("firstName"));
+    EXPECT_FALSE(json.get<int>("first_name"));
 
     long age = json.get("age", 0);
     EXPECT_EQ(age, 25);
@@ -63,47 +63,47 @@ TEST(Json, parsesValuesCorrectly)
     auto address = json.get<Json>("address");
     ASSERT_TRUE(address);
     EXPECT_EQ(*address, Json("{\n"
-                            "  \"streetAddress\": \"21 2nd Street\",\n"
+                            "  \"street_address\": \"21 2nd Street\",\n"
                             "  \"city\": \"New York\",\n"
                             "  \"state\": \"NY\",\n"
-                            "  \"postalCode\": 10021\n"
+                            "  \"postal_code\": 10021\n"
                             "}"));
 }
 
-TEST(Json, pathAccess)
+TEST(Json, path_access)
 {
-    Json json(sampleJson);
+    Json json(sample_json);
     ASSERT_TRUE(json);
 
-    auto firstPhoneNumber = json.get<std::string>("phoneNumber[0].number");
-    ASSERT_TRUE(firstPhoneNumber);
-    EXPECT_EQ(*firstPhoneNumber, "212 555-1234");
-    auto secondPhoneNumber = json.get<std::string>("phoneNumber[1].number");
-    EXPECT_EQ(*secondPhoneNumber, "646 555-4567");
+    auto first_phone_number = json.get<std::string>("phone_number[0].number");
+    ASSERT_TRUE(first_phone_number);
+    EXPECT_EQ(*first_phone_number, "212 555-1234");
+    auto second_phone_number = json.get<std::string>("phone_number[1].number");
+    EXPECT_EQ(*second_phone_number, "646 555-4567");
 
 }
 
-TEST(Json, propertiesCanBeAccessedAndModified)
+TEST(Json,  property_access_and_modification)
 {
-    Json json(sampleJson);
+    Json json(sample_json);
     ASSERT_TRUE(json);
 
     EXPECT_THROW(json[0], bad_json_access);
-    auto& value = json["firstName"];
+    auto& value = json["first_name"];
     EXPECT_EQ("John"s, value);
     value = "Jake"s;
     EXPECT_EQ(value, "Jake"s);
-    EXPECT_EQ(json.get<std::string>("firstName").value(), "Jake"s);
+    EXPECT_EQ(json.get<std::string>("first_name").value(), "Jake"s);
 
-    auto newJson = Json::createObject();
-    newJson["hello"] = "world"s;
-    newJson["aNumber"] = 2;
-    EXPECT_EQ(newJson, Json("{\"hello\": \"world\", \"aNumber\": 2}"));
+    auto new_json = Json::create_object();
+    new_json["hello"] = "world"s;
+    new_json["a_number"] = 2;
+    EXPECT_EQ(new_json, Json("{\"hello\": \"world\", \"a_number\": 2}"));
 }
 
-TEST(Json, arrayAccess)
+TEST(Json, array_access)
 {
-    auto json = Json::createArray();
+    auto json = Json::create_array();
 
     EXPECT_THROW(json.at(2), std::out_of_range);
     json.push_back(std::string("Stuff"));

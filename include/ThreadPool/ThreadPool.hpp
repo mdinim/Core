@@ -18,18 +18,40 @@
 
 namespace Core {
 
+/// \brief Enum representing the priority of jobs. Default priority is normal
+/// The user is free to define custom priority
+enum class JobPriority : unsigned {
+    Low = 0,
+    Normal = 50,
+    High = 100
+};
+
 /// \brief Thread pool implementation.
 /// \param N the maximum number of concurrent threads this instance is responsible for.
 /// Any callable type can be dispatched into this construct.
 /// Result values can be claimed through std::future objects.
+/// Jobs delegated to the thread pool are guaranteed to be run in order of their priority (descending)
+/// There is no guarantee however that jobs with the same priority are run in the order they were queued in.
 template<unsigned N>
 class ThreadPool {
 private:
     template<class Callable, class ...Args>
     using ResultTypeOfCallable = typename std::invoke_result<Callable, Args...>::type;
 
-    using WrappedJob = std::function<void()>;
-    using JobQueue = std::queue<WrappedJob>;
+    /// \brief Wrap a job with its priority into this simple struct
+    struct WrappedJob {
+        /// \brief Priority of the job.
+        unsigned priority;
+
+        /// \biref function wrapper around the job to do.
+        std::function<void()> job;
+
+        /// \brief Comparison operator to support the priority queue
+        bool operator<(const WrappedJob& rhs) const {
+            return priority < rhs.priority;
+        }
+    };
+    using JobQueue = std::priority_queue<WrappedJob>;
 
     /// \brief Internal representation of a worker thread.
     /// Subscribed to the job queue, whenever a job arrives one of the workers pick it up.
@@ -67,13 +89,13 @@ private:
                     }
 
                     if (!queue->empty()) {
-                        job = std::move(queue->front());
+                        job = std::move(queue->top());
                         queue->pop();
                     }
                 }
 
                 if(job.has_value())
-                    job.value()();
+                    job.value().job();
             }
         }
     public:
@@ -146,6 +168,10 @@ public:
         has_job_or_stopped->notify_all();
     }
 
+    // Non-copyable
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
+
     /// \brief Stop the thread pool.
     /// \param waitForQueuedJobs decides whether or not clear ist job queue before finishing.
     void stop(bool graceful = false) {
@@ -163,21 +189,38 @@ public:
         return !_queue->empty();
     }
 
+    /// \biref Add a job with normal priority (default). Convenience function.
+    template<class Callable, class... Args>
+    auto add_job(Callable job, Args... args)
+        -> std::future<ResultTypeOfCallable<Callable, Args...>> {
+        return add_job(JobPriority::Normal, job, args...);
+    }
+
+    /// \biref Add a job with pre-defined priority (\see Core::JobPriority). Convenience function.
+    template<class Callable, class... Args>
+    auto add_job(JobPriority priority, Callable job, Args... args)
+    -> std::future<ResultTypeOfCallable<Callable, Args...>> {
+        return add_job(static_cast<unsigned>(priority), job, args...);
+    }
+
     /// \brief Add a job.
+    /// \param priority a number representing the priority of the job. The higher the sooner the job is going to get
+    /// done.
     /// \param job any callable (functor, lambda, std::function, function pointer).
     /// \param args parameters the callable should be invoked with.
     /// \returns std::future that'll get the result if its done.
     template<class Callable, class... Args>
-    auto add_job(Callable job, Args ...args) -> std::future<ResultTypeOfCallable<Callable, Args...>> {
+    auto add_job(unsigned priority, Callable job, Args... args)
+        -> std::future<ResultTypeOfCallable<Callable, Args...>> {
         if (_stopped) {
             return {};
         }
 
         auto task = std::make_shared<std::packaged_task<ResultTypeOfCallable<Callable, Args...>(Args...)>>(job);
 
-        auto wrapped_job = [task, args = std::make_tuple(std::forward<Args>(args)...)]() {
+        auto wrapped_job = WrappedJob{priority, [task, args = std::make_tuple(std::forward<Args>(args)...)]() {
             std::apply(*task, args);
-        };
+        }};
 
         {
             std::unique_lock lock(*_queue_guard);

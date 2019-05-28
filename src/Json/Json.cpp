@@ -15,7 +15,7 @@
 
 namespace Core {
 
-Json::PropList Json::parsePath(std::string path) {
+Json::PropList Json::parse_path(std::string path) {
     PropList propList;
 
     enum ParseState {
@@ -104,7 +104,7 @@ Json::PropList Json::parsePath(std::string path) {
     return propList;
 }
 
-std::optional<Json::Value> Json::parseValue(const std::string_view& valueString) {
+std::optional<Json::Value> Json::parse_value(const std::string_view &value_string) {
     enum class ParseState {
         None,
         Null,
@@ -128,9 +128,9 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
 
     bool escaped = false;
     bool shouldEnd = false;
-    auto valueStart = valueString.begin();
-    auto valueEnd = valueString.begin();
-    for(auto it = valueString.begin(); it != valueString.end(); ++it)
+    auto valueStart = value_string.begin();
+    auto valueEnd = value_string.begin();
+    for(auto it = value_string.begin(); it != value_string.end(); ++it)
     {
         const auto &currentState = stateStack.top();
         const auto &character = *it;
@@ -172,7 +172,7 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
             case ParseState::Null: {
                 using namespace std::string_literals;
                 if(std::string_view(&*valueStart, "null"s.size()) == "null") {
-                    std::string_view remaining(&*(valueStart+ 4), std::distance(valueStart+4, valueString.end()));
+                    std::string_view remaining(&*(valueStart+ 4), std::distance(valueStart+4, value_string.end()));
                     if(std::all_of(remaining.begin(), remaining.end(), isSpace))
                         return {Null()};
                 }
@@ -181,14 +181,14 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
             case ParseState::Bool: {
                 using namespace std::string_literals;
                 if(std::string_view(&*valueStart, "true"s.size()) == "true") {
-                    std::string_view remaining(&*(valueStart+ 4), std::distance(valueStart+4, valueString.end()));
+                    std::string_view remaining(&*(valueStart+ 4), std::distance(valueStart+4, value_string.end()));
                     if(std::all_of(remaining.begin(), remaining.end(), isSpace))
                         return {true};
 
                     return {};
                 }
                 if(std::string_view(&*valueStart, "false"s.size()) == "false") {
-                    std::string_view remaining(&*(valueStart+ 5), std::distance(valueStart+5, valueString.end()));
+                    std::string_view remaining(&*(valueStart+ 5), std::distance(valueStart+5, value_string.end()));
                     if(std::all_of(remaining.begin(), remaining.end(), isSpace))
                         return {false};
                     return {};
@@ -302,14 +302,14 @@ std::optional<Json::Value> Json::parseValue(const std::string_view& valueString)
     return {};
 }
 
-std::optional<Json::Value> Json::_get(Json::PropList propList) const {
-    if(propList.empty())
+std::optional<Json::Value> Json::_get(Json::PropList prop_list) const {
+    if(prop_list.empty())
     {
         return {};
     }
 
-    auto currentProp = std::move(propList.front());
-    propList.erase(propList.begin());
+    auto currentProp = std::move(prop_list.front());
+    prop_list.erase(prop_list.begin());
 
     auto value = visit_variant(currentProp, [this](const std::string& prop) {
         return visit_variant(_data, [&prop](const JsonObject& object) -> MaybeValue {
@@ -331,16 +331,16 @@ std::optional<Json::Value> Json::_get(Json::PropList propList) const {
         });
     });
 
-    if(!propList.empty() && value) {
+    if(!prop_list.empty() && value) {
         if(value->is<Json>()) {
-            return std::get<Json>(*value)._get(std::move(propList));
+            return std::get<Json>(*value)._get(std::move(prop_list));
         }
     }
 
     return value;
 }
 
-Json::Json(const std::string& jsonString) : _valid(true) {
+Json::Json(const std::string& json_string) : _valid(true) {
     enum class ParseState {
         None,
         Array,
@@ -365,12 +365,12 @@ Json::Json(const std::string& jsonString) : _valid(true) {
     std::stack<ValueContainer> containerStack;
     std::stack<std::string_view> keyStack;
 
-    auto stringStart = jsonString.begin();
+    auto stringStart = json_string.begin();
     bool moreDataShouldCome = false;
     std::optional<std::string::const_iterator> valueStart;
     std::optional<std::string::const_iterator> valueEnd;
 
-    for(auto it = jsonString.begin(); it != jsonString.end() && _valid; ++it) {
+    for(auto it = json_string.begin(); it != json_string.end() && _valid; ++it) {
         const auto &currentState = stateStack.top();
         const auto &character = *it;
 
@@ -417,7 +417,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                         if (keyStack.empty()) {
                             _data = std::move(currentContainer);
                         } else {
-                            auto currentJson = Json::createObject();
+                            auto currentJson = Json::create_object();
                             currentJson._data = std::move(currentContainer);
                             std::visit(DataVisitor(currentJson, keyStack), containerStack.top());
                         }
@@ -464,7 +464,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                         if (keyStack.empty()) {
                             _data = std::move(currentContainer);
                         } else {
-                            auto currentJson = Json::createObject();
+                            auto currentJson = Json::create_object();
                             currentJson._data = std::move(currentContainer);
                             std::visit(DataVisitor(currentJson, keyStack), containerStack.top());
                         }
@@ -534,7 +534,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
                         if (valueStart && valueEnd) {
                             std::string_view value(&*(*valueStart), std::distance(*valueStart, *valueEnd));
 
-                            auto parsedValue = parseValue(value);
+                            auto parsedValue = parse_value(value);
                             if(!parsedValue) {
                                 _valid = false;
                                 continue;
@@ -615,7 +615,7 @@ Json::Json(const std::string& jsonString) : _valid(true) {
 }
 
 std::optional<Json::Value> Json::get(const std::string& path) const {
-    return _get(parsePath(path));
+    return _get(parse_path(path));
 }
 
 std::size_t Json::size() const {
@@ -637,15 +637,15 @@ bool Json::operator==(const Core::Json &other) const {
     });
 }
 
-void Json::print(std::ostream& os, unsigned& tabCount) const {
-    const auto printTabs = [&tabCount, &os]() {
-        for(unsigned i = 0; i < tabCount; i++)
+void Json::print(std::ostream& os, unsigned& tab_count) const {
+    const auto printTabs = [&tab_count, &os]() {
+        for(unsigned i = 0; i < tab_count; i++)
             os << '\t';
     };
 
     static const auto valueVisitor = make_overload {
-        [&os, &tabCount] (const Json& json) {
-            json.print(os, tabCount);
+        [&os, &tab_count] (const Json& json) {
+            json.print(os, tab_count);
         }, [&os](const std::string& value) {
             os << '"' << value << '"';
         }, [&os](const Null&) {
@@ -656,31 +656,31 @@ void Json::print(std::ostream& os, unsigned& tabCount) const {
     };
 
     auto i = 0u;
-    visit_variant(_data, [&os, &i, &printTabs, &tabCount](const Json::JsonArray& array) {
+    visit_variant(_data, [&os, &i, &printTabs, &tab_count](const Json::JsonArray& array) {
             os << "[" << std::endl;
-            tabCount++;
+            tab_count++;
             for(const auto& value : array) {
                 printTabs();
-                visit_variant(value.toStdVariant(), valueVisitor);
+                visit_variant(value.to_std_variant(), valueVisitor);
                 if(++i != array.size())
                     os << ",";
                 os << std::endl;
             }
-            tabCount--;
+            tab_count--;
             printTabs();
             os << "]";
-        }, [&os, &i, &printTabs, &tabCount](const Json::JsonObject& object) {
+        }, [&os, &i, &printTabs, &tab_count](const Json::JsonObject& object) {
             os << "{" << std::endl;
-            tabCount++;
+            tab_count++;
             for(const auto& [key, value] : object) {
                 printTabs();
                 os << key << ": ";
-                visit_variant(value.toStdVariant(), valueVisitor);
+                visit_variant(value.to_std_variant(), valueVisitor);
                 if(++i != object.size())
                     os << ",";
                 os << std::endl;
             }
-            tabCount--;
+            tab_count--;
             printTabs();
             os << "}";
         }
