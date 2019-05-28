@@ -83,6 +83,20 @@ TEST(Json, path_access)
 
 }
 
+TEST(Json, array_in_array)
+{
+    auto json = Json::create_array();
+    json.set("[0][0].dummy", std::string("what"));
+    std::stringstream stuff;
+    stuff << json << std::endl;
+    std::cout << stuff.str() << std::endl;
+    Json reparsed(stuff.str());
+    std::cout << reparsed << std::endl;
+    ASSERT_TRUE(reparsed.valid());
+    
+    ASSERT_EQ(*reparsed.get<std::string>("[0][0].dummy"), "what");
+}
+
 TEST(Json,  property_access_and_modification)
 {
     Json json(sample_json);
@@ -114,4 +128,19 @@ TEST(Json, array_access)
     for(auto i = 0u; i < 5u; ++i) {
         EXPECT_EQ(json[i], Json::Null());
     }
+}
+
+TEST(Json, leading_white_spaces)
+{
+    Json object("\n\t\r   {}"s);
+    ASSERT_TRUE(object);
+    
+    Json array("\n\r\t\n\n [{}]"s);
+    ASSERT_TRUE(array);
+}
+
+TEST(Json, escaped_characters)
+{
+    Json object("{ \"line_broken_\n\r\f\b\\\"key\\\"\": \"value\", \"unicode\\u8484 s\": \"\u1234\"}"s);
+    ASSERT_TRUE(object);
 }

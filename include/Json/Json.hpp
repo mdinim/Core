@@ -48,7 +48,9 @@ private:
     using JsonObject = std::map<std::string, Value>;
     using JsonArray = std::vector<Value>;
     using ValueContainer = std::variant<JsonObject, JsonArray>;
-
+    using ParsedValue = std::pair<Value, unsigned int>;
+private:
+    
     /// \brief Internal representatiton of the contained data.
     ValueContainer _data;
 
@@ -83,12 +85,21 @@ private:
     /// Internal use only.
     /// \see Json::get
     static PropList parse_path(std::string path);
+    
+    /// \brief Parses json of object type
+    static std::optional<ParsedValue> parse_object(const std::string_view object_string);
+    
+    /// \brief Parses json of array type
+    static std::optional<ParsedValue> parse_array(const std::string_view object_string);
 
+    /// \brief Parses a string. The string_view must start after the first quote.
+    static std::optional<std::string> parse_string(const std::string_view key_string);
+    
     /// \brief Parses the value received in value_string.
     /// \return optionally the Value received in the string.
     /// Parses strings like "Hello World", null, true, false, 1e-35 that conform to the JSON specification.
-    static std::optional<Value> parse_value(const std::string_view &value_string);
-
+    static std::optional<ParsedValue> parse_value(const std::string_view &value_string);
+private:
     /// \brief Get the property represented by the property list propList
     /// Internal use only to avoid copying the list multiple times.
     /// \see Json::get
