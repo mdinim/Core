@@ -110,7 +110,7 @@ private:
         /// \brief Destruct the instance of the worker
         /// Detaches the underlying thread.
         ~Worker() {
-            if(!_stopped)
+            if(!*_stopped)
                 stop();
 
             if(_thread.joinable())
