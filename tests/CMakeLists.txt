@@ -78,7 +78,6 @@ function(generate_overall_coverage_report)
                      --directory $<TARGET_FILE_DIR:${TEST_TARGET_NAME}>
                      --directory $<TARGET_FILE_DIR:Json>
                      --output-file ${COVERAGE_LOCATION}/coverage.info --rc lcov_branch_coverage=1
-                     --gcov-tool gcov-8
                 COMMAND lcov --remove ${COVERAGE_LOCATION}/coverage.info --output-file ${COVERAGE_LOCATION}/coverage.info */extern/* *8.3.0* *MacOSX.sdk* tests/*
                 DEPENDS ${TEST_TARGET_NAME}
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
