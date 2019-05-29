@@ -6,17 +6,20 @@ stages:
 # explicit version is required to have the compatibility between lcov and gcov
 image: gcc:8.3
 
+before_script:
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
+    - apt-get update -qq && apt-get install -y -qq python3-pip
+    - pip3 install pip --upgrade
+    - hash -d pip3
+    - pip3 install cmake --upgrade
+
 build:
     stage: build
-    before_script:
-        - git submodule sync --recursive
-        - git submodule update --init --recursive
-        - apt-get update -qq && apt-get install -y -qq python3-pip
+    script:
         - gcc -v
         - g++ -v
-        - pip3 install cmake --upgrade
         - cmake --version
-    script:
         - mkdir build
         - cd build
         - cmake .. -DCMAKE_BUILD_TYPE=RELEASE
@@ -29,18 +32,13 @@ build:
 test:
     stage: test
     script:
-        - apt-get update -qq && apt-get install -y -qq python3-pip
-        - pip3 install cmake --upgrade
         - cd build
         - ctest . -V --repeat-until-fail 10
 
 coverage:
     stage: deploy
     script:
-        - git submodule sync --recursive
-        - git submodule update --init --recursive
-        - apt-get update -qq && apt-get install -y -qq python3-pip alien
-        - pip3 install cmake --upgrade
+        - apt-get install -y -qq alien
         - mkdir coverage 
         - cd coverage 
         # Manually download the RPM, apt does not contain the correct version
