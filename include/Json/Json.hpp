@@ -29,6 +29,18 @@ public:
         return _message.c_str();
     }
 };
+    
+    
+/// \brief Exception that is thrown in case bad path is provided when dealing with JSONs.
+class bad_json_path : public std::exception {
+private:
+    std::string _message;
+public:
+    bad_json_path(std::string message) : _message(std::move(message)) {}
+    const char * what() const noexcept {
+        return _message.c_str();
+    }
+};
 
 /// \brief JSON object representation.
 /// Provides means to handle JSON objects, parses, prettyfies, prints in the appropriate manner.
@@ -43,12 +55,14 @@ public:
 private:
     using PropList = std::list<std::variant<std::string, std::size_t>>;
 
-    using Value = ValueWrapper<Null, bool, int, long, double, std::string, Json>;
+    using Value = ValueWrapper<Null, bool, int, long, long long, double, std::string, Json>;
     using MaybeValue = std::optional<Value>;
     using JsonObject = std::map<std::string, Value>;
     using JsonArray = std::vector<Value>;
     using ValueContainer = std::variant<JsonObject, JsonArray>;
-
+    using ParsedValue = std::pair<Value, unsigned int>;
+private:
+    
     /// \brief Internal representatiton of the contained data.
     ValueContainer _data;
 
@@ -83,12 +97,21 @@ private:
     /// Internal use only.
     /// \see Json::get
     static PropList parse_path(std::string path);
+    
+    /// \brief Parses json of object type
+    static std::optional<ParsedValue> parse_object(const std::string_view object_string);
+    
+    /// \brief Parses json of array type
+    static std::optional<ParsedValue> parse_array(const std::string_view object_string);
 
+    /// \brief Parses a string. The string_view must start after the first quote.
+    static std::optional<std::string> parse_string(const std::string_view key_string);
+    
     /// \brief Parses the value received in value_string.
     /// \return optionally the Value received in the string.
     /// Parses strings like "Hello World", null, true, false, 1e-35 that conform to the JSON specification.
-    static std::optional<Value> parse_value(const std::string_view &value_string);
-
+    static std::optional<ParsedValue> parse_value(const std::string_view &value_string);
+private:
     /// \brief Get the property represented by the property list propList
     /// Internal use only to avoid copying the list multiple times.
     /// \see Json::get
@@ -190,7 +213,7 @@ public:
         auto variant = get(path);
         if(variant && std::holds_alternative<T>(*variant))
             return std::get<T>(*variant);
-        return {};
+        return std::nullopt;
     }
 
     /// \brief Get part of the json.
@@ -250,7 +273,9 @@ public:
     template<class T>
     void set(const std::string &path, const T& value) {
         PropList prop_list = parse_path(path);
-
+        if(prop_list.empty())
+            throw bad_json_path("Empty or invalid path");
+        
         _set(prop_list, value);
     }
 
