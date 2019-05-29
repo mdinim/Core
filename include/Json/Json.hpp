@@ -29,6 +29,18 @@ public:
         return _message.c_str();
     }
 };
+    
+    
+/// \brief Exception that is thrown in case bad path is provided when dealing with JSONs.
+class bad_json_path : public std::exception {
+private:
+    std::string _message;
+public:
+    bad_json_path(std::string message) : _message(std::move(message)) {}
+    const char * what() const noexcept {
+        return _message.c_str();
+    }
+};
 
 /// \brief JSON object representation.
 /// Provides means to handle JSON objects, parses, prettyfies, prints in the appropriate manner.
@@ -43,7 +55,7 @@ public:
 private:
     using PropList = std::list<std::variant<std::string, std::size_t>>;
 
-    using Value = ValueWrapper<Null, bool, int, long, double, std::string, Json>;
+    using Value = ValueWrapper<Null, bool, int, long, long long, double, std::string, Json>;
     using MaybeValue = std::optional<Value>;
     using JsonObject = std::map<std::string, Value>;
     using JsonArray = std::vector<Value>;
@@ -201,7 +213,7 @@ public:
         auto variant = get(path);
         if(variant && std::holds_alternative<T>(*variant))
             return std::get<T>(*variant);
-        return {};
+        return std::nullopt;
     }
 
     /// \brief Get part of the json.
@@ -261,7 +273,9 @@ public:
     template<class T>
     void set(const std::string &path, const T& value) {
         PropList prop_list = parse_path(path);
-
+        if(prop_list.empty())
+            throw bad_json_path("Empty or invalid path");
+        
         _set(prop_list, value);
     }
 

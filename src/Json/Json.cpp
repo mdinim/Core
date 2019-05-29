@@ -31,7 +31,7 @@ std::optional<std::string> Json::parse_string(const std::string_view key_string)
                 result += next;
                 key_end++;
             } else if (next == 'u' && std::distance(key_end, key_string.end()) > 3) {
-                result += current + next;
+                result += current; result += next;
                 int counter = 2;
                 
                 while (std::isxdigit(*(key_end + counter)) != 0 && counter <= 5) {
@@ -42,7 +42,7 @@ std::optional<std::string> Json::parse_string(const std::string_view key_string)
                 if (counter != 6)
                     return std::nullopt;
                 
-                key_end += 6;
+                key_end += 5;
             } else {
                 return std::nullopt;
             }
@@ -51,7 +51,10 @@ std::optional<std::string> Json::parse_string(const std::string_view key_string)
         }
         
         key_end++;
-    } while (current != '"');
+    } while (current != '"' && key_end != key_string.end());
+    if (key_end == key_string.end())
+        // closing " was not found
+        return std::nullopt;
     
     return result;
 }
@@ -182,15 +185,16 @@ std::optional<Json::ParsedValue> Json::parse_object(const std::string_view objec
             case ParseState::None: {
                 if (std::isspace(current_character))
                     continue;
-                if (current_character == '"')
+                else if (current_character == '"')
                     current_state = ParseState::Key;
-                
-                if (current_character == '}') {
+                else if (current_character == '}') {
                     if (more_data)
                         return std::nullopt;
                     
                     processed_characters = std::distance(object_string.begin(), it);
                     end = true;
+                } else {
+                    return std::nullopt;
                 }
                 break;
             }
@@ -245,7 +249,7 @@ std::optional<Json::ParsedValue> Json::parse_object(const std::string_view objec
                         auto value = Json::parse_value(inner_view);
                         if (!value || !key)
                             return std::nullopt;
-                        object.set(*key, value->first);
+                        object[*key] = value->first;
                         
                         it += value->second - 1;
                         
@@ -295,7 +299,8 @@ Json::PropList Json::parse_path(std::string path) {
     };
     for(auto it = path.begin(); it != path.end(); it++) {
         auto& character = *it;
-        if(character == '\\') {
+        constexpr const std::array<char, 4> allowed = {'[', ']', '.', '\\'};
+        if(character == '\\' && std::find(allowed.begin(), allowed.end(), *(it + 1)) != allowed.end()) {
             escaped = true;
             path.erase(it);
         } else {
@@ -329,24 +334,13 @@ Json::PropList Json::parse_path(std::string path) {
                     indexBegin = it + 1;
                 } else if(!escaped && character == ']') {
                     std::string indexStr(&*indexBegin.value(), std::distance(*indexBegin, it));
-                    if(std::all_of(indexStr.begin(), indexStr.end(), [](const auto& c){ return std::isdigit(c);})) {
-                        try {
-                            auto index = std::stoi(indexStr);
+                    try {
+                        auto index = std::stoi(indexStr);
 
-                            propList.emplace_back(index);
-                            indexesPushed++;
-                        } catch (std::invalid_argument&) {
-                            removeLastNProps(indexesPushed, propList);
-
-                            propList.emplace_back(
-                                    std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
-                        }
-                    } else {
-                        removeLastNProps(indexesPushed, propList);
-                        indexesPushed = 0;
-
-                        propList.emplace_back(
-                                std::string(&*propBegin.value(), std::distance(*propBegin, it + 1)));
+                        propList.emplace_back(index);
+                        indexesPushed++;
+                    } catch (std::out_of_range&) {
+                        throw bad_json_path("Index is out of range");
                     }
                 } else if(!escaped && character == '.') {
                     currentState = ParseState::Prop;
@@ -387,6 +381,8 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
     bool shouldEnd = false;
     auto valueStart = value_string.begin();
     auto valueEnd = value_string.begin();
+    bool hadDataAfterPoint = false;
+    bool hadDataAfterExponentSign = false;
     unsigned int processed_characters = 0;
     for(auto it = value_string.begin(); it != value_string.end() && !shouldEnd; ++it)
     {
@@ -396,9 +392,6 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
 
         switch(currentState) {
             case ParseState::None:
-                if(std::isspace(character))
-                    continue;
-
                 valueStart = it;
                 switch(character) {
                     case 'n':
@@ -424,14 +417,14 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
                             it--;
                             continue;
                         }
-                        return {};
+                        return std::nullopt;
                 }
             case ParseState::Null: {
                 using namespace std::string_literals;
                 if(std::string_view(&*valueStart, "null"s.size()) == "null") {
                     return {ParsedValue{Null(), processed_characters + 3}};
                 }
-                return {};
+                return std::nullopt;
             }
             case ParseState::Bool: {
                 using namespace std::string_literals;
@@ -441,7 +434,7 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
                 if(std::string_view(&*valueStart, "false"s.size()) == "false") {
                     return {ParsedValue{false, processed_characters + 4}};
                 }
-                return {};
+                return std::nullopt;
             }
             case ParseState::LeadingZero:
                 if(std::isspace(character)) {
@@ -453,8 +446,13 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
                     stateStack.pop();
                     stateStack.push(ParseState::Fractional);
                     continue;
+                } else if (character == 'e' || character == 'E' || std::isdigit(character)) {
+                    stateStack.pop();
+                    stateStack.push(ParseState::WholePart);
+                    it--;
+                    continue;
                 } else
-                    return {};
+                    return std::nullopt;
             case ParseState::WholePart:
                 isWholeNumber = true;
                 if(std::isspace(character)) {
@@ -483,9 +481,8 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
             case ParseState::Fractional: {
                 isFractionalNumber = true;
                 isWholeNumber = false;
-                if(std::isspace(character)) {
-                    shouldEnd = true;
-                    continue;
+                if(std::isspace(character) && !hadDataAfterPoint) {
+                    return std::nullopt;
                 }
                 valueEnd = it + 1;
                 switch(character) {
@@ -496,10 +493,13 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
                         stateStack.push(ParseState::ExponentSign);
                         continue;
                     default:
-                        if(std::isdigit(character))
+                        if(std::isdigit(character)) {
+                            hadDataAfterPoint = true;
                             continue;
-                        return {};
+                        }
+                        shouldEnd = true;
                 }
+                break;
             }
             case ParseState::ExponentSign:
                 if(character == '-' || character == '+') {
@@ -507,20 +507,23 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
                     stateStack.push(ParseState::Exponent);
                     continue;
                 }
-                if(std::isdigit(character))
-                    continue;
-                return {};
-            case ParseState::Exponent: {
-                if(std::isspace(character) && !exponentSignProcessed)
-                    return {};
-                valueEnd = it + 1;
-                if(std::isspace(character)) {
-                    shouldEnd = true;
+                if (std::isdigit(character)) {
+                    stateStack.push(ParseState::Exponent);
                     continue;
                 }
-                if(std::isdigit(character))
-                    continue;
-                return {};
+                return std::nullopt;
+            case ParseState::Exponent: {
+                if((std::isspace(character) && exponentSignProcessed) ||
+                   (!hadDataAfterExponentSign && !std::isdigit(character)))
+                    return std::nullopt;
+                valueEnd = it + 1;
+                
+                if(!std::isdigit(character)) {
+                    shouldEnd = true;
+                } else {
+                    hadDataAfterExponentSign = true;
+                }
+                continue;
             }
             case ParseState::String: {
                 auto string = Json::parse_string(
@@ -541,7 +544,15 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
         try {
             return {ParsedValue{std::stoi(std::string(extractedValue)), processed_characters}};
         } catch(std::out_of_range& ex) {
-            return {ParsedValue{std::stol(std::string(extractedValue)), processed_characters}};
+            try {
+                return {ParsedValue{std::stol(std::string(extractedValue)), processed_characters}};
+            } catch (std::out_of_range& ex) {
+                try {
+                    return {ParsedValue{std::stoll(std::string(extractedValue)), processed_characters}};
+                } catch(...) {
+                    return std::nullopt;
+                }
+            }
         }
     if(isFractionalNumber)
         return {ParsedValue{std::stod(std::string(extractedValue)), processed_characters}};
@@ -551,7 +562,7 @@ std::optional<Json::ParsedValue> Json::parse_value(const std::string_view &value
 std::optional<Json::Value> Json::_get(Json::PropList prop_list) const {
     if(prop_list.empty())
     {
-        return {};
+        return std::nullopt;
     }
 
     auto currentProp = std::move(prop_list.front());
@@ -587,9 +598,15 @@ std::optional<Json::Value> Json::_get(Json::PropList prop_list) const {
 }
 
 Json::Json(const std::string& json_string) : _valid(true) {
-    if (auto object = parse_object(json_string); object) {
+    if (auto object = parse_object(json_string); object && (object->second == json_string.size() ||
+        std::all_of(json_string.begin() + object->second + 1, json_string.end(),
+            [](const char& c) { return std::isspace(c);}
+        ))) {
         _data = std::move(std::get<Json>(object->first)._data);
-    } else if (auto array = parse_array(json_string); array) {
+    } else if (auto array = parse_array(json_string); array && (array->second == json_string.size() ||
+        std::all_of(json_string.begin() + array->second + 1, json_string.end(),
+                    [](const char& c) { return std::isspace(c);}
+        ))) {
         _data = std::move(std::get<Json>(array->first)._data);
     } else {
         _valid = false;
@@ -625,7 +642,8 @@ void Json::print(std::ostream& os, unsigned& tab_count) const {
             os << '\t';
     };
 
-    static const auto valueVisitor = make_overload {
+    
+    const auto valueVisitor = make_overload {
         [&os, &tab_count] (const Json& json) {
             json.print(os, tab_count);
         }, [&os](const std::string& value) {
@@ -640,7 +658,7 @@ void Json::print(std::ostream& os, unsigned& tab_count) const {
     };
 
     auto i = 0u;
-    visit_variant(_data, [&os, &i, &printTabs, &tab_count](const Json::JsonArray& array) {
+    visit_variant(_data, [&os, &i, &printTabs, &tab_count, &valueVisitor](const Json::JsonArray& array) {
             os << "[" << std::endl;
             tab_count++;
             for(const auto& value : array) {
@@ -653,7 +671,7 @@ void Json::print(std::ostream& os, unsigned& tab_count) const {
             tab_count--;
             printTabs();
             os << "]";
-        }, [&os, &i, &printTabs, &tab_count](const Json::JsonObject& object) {
+        }, [&os, &i, &printTabs, &tab_count, &valueVisitor](const Json::JsonObject& object) {
             os << "{" << std::endl;
             tab_count++;
             for(const auto& [key, value] : object) {
