@@ -38,6 +38,7 @@ test:
 coverage:
     stage: deploy
     script:
+        - apt-get install -y -qq alien
         - mkdir coverage 
         - cd coverage 
         # Manually download the RPM, apt does not contain the correct version
