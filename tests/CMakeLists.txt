@@ -90,7 +90,7 @@ function(generate_overall_coverage_report)
         )
 
         add_custom_target(${COVERAGE_NAME}
-                COMMAND genhtml ${COVERAGE_LOCATION}/coverage.info --output-directory ${COVERAGE_LOCATION}
+                COMMAND genhtml ${COVERAGE_LOCATION}/coverage.info --demangle-cpp --output-directory ${COVERAGE_LOCATION}
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                 DEPENDS ${COVERAGE_NAME}_preproc
         )
