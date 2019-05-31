@@ -172,11 +172,7 @@ private:
                 );
 
             // Visit the next one
-            visit_variant(data.get().to_std_variant(), [&prop_list, &value](Json &json) {
-                json._set(prop_list, value);
-            }, [](const auto&) {
-                // should never happen
-            });
+            std::get<Json>(data.get())._set(prop_list, value);
         }
     }
 

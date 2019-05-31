@@ -33,7 +33,7 @@ auto sleep_for = [](std::chrono::milliseconds dur) {
 
 TEST(ThreadPool, can_be_constructed)
 {
-    ThreadPool<10> pool;
+    ThreadPool<5> pool;
     ASSERT_FALSE(pool.has_queued_job());
 }
 
