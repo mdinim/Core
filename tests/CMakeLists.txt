@@ -74,10 +74,11 @@ function(generate_overall_coverage_report)
                 COMMAND mkdir -p ${COVERAGE_LOCATION}
                 COMMAND $<TARGET_FILE:${TEST_TARGET_NAME}>
                 COMMAND lcov -c
-                     --base-directory .
-                     --directory $<TARGET_FILE_DIR:${TEST_TARGET_NAME}>
-                     --directory $<TARGET_FILE_DIR:Json>
-                     --output-file ${COVERAGE_LOCATION}/coverage.info --rc lcov_branch_coverage=1
+                    --base-directory .
+                    --directory $<TARGET_FILE_DIR:${TEST_TARGET_NAME}>
+                    --directory $<TARGET_FILE_DIR:Json>
+                    --directory $<TARGET_FILE_DIR:DateTime>
+                    --output-file ${COVERAGE_LOCATION}/coverage.info --rc lcov_branch_coverage=1
                 COMMAND lcov --remove ${COVERAGE_LOCATION}/coverage.info --output-file ${COVERAGE_LOCATION}/coverage.info */extern/* *8.3.0* *MacOSX.sdk* tests/*
                 DEPENDS ${TEST_TARGET_NAME}
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -106,8 +107,11 @@ target_link_libraries(Test_ThreadPool ThreadPool)
 package_add_test(Test_Json Json_test.cpp)
 target_link_libraries(Test_Json Json)
 
-package_add_test(Test_Core MessageQueue_test.cpp ThreadPool_test.cpp Json_test.cpp)
-target_link_libraries(Test_Core Json ThreadPool MessageQueue Utils)
+package_add_test(Test_DateTime Time_test.cpp Duration_test.cpp)
+target_link_libraries(Test_DateTime DateTime)
+
+package_add_test(Test_Core MessageQueue_test.cpp ThreadPool_test.cpp Json_test.cpp Time_test.cpp Duration_test.cpp)
+target_link_libraries(Test_Core Json ThreadPool MessageQueue Utils DateTime)
 
 if(${CREATE_COVERAGE_REPORT})
     if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
@@ -122,5 +126,11 @@ if(${CREATE_COVERAGE_REPORT})
         message("-- Coverage with GNU Code Coverage Tools")
     endif()
 
-    generate_overall_coverage_report(${Json_FILES} ${Json_SRC_FILES} ${MessageQueue_FILES} ${ThreadPool_FILES} ${Utils_FILES})
+    generate_overall_coverage_report(
+        ${Json_FILES} ${Json_SRC_FILES}
+        ${DateTime_FILES} ${DateTime_SRC_FILES}
+        ${MessageQueue_FILES}
+        ${ThreadPool_FILES}
+        ${Utils_FILES})
 endif()
+
