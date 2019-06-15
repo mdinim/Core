@@ -33,12 +33,6 @@ list(APPEND Utils_FILES
         include/Utils/ValueWrapper.hpp
 )
 
-### Target Core::Json
-add_library(Json STATIC
-        include/Json/Json.hpp
-        src/Json/Json.cpp
-)
-
 # Until this has more files this is installed as a single header
 list(APPEND Json_FILES
         include/Json/Json.hpp
@@ -46,6 +40,12 @@ list(APPEND Json_FILES
 
 list(APPEND Json_SRC_FILES
         src/Json/Json.cpp
+)
+
+### Target Core::Json
+add_library(Json STATIC
+        ${Json_FILES}
+        ${Json_SRC_FILES}
 )
 
 # Compile options
@@ -72,6 +72,43 @@ target_include_directories(Json
 # gcov works for clang as well
 target_link_libraries(Json PUBLIC Utils
     $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<CXX_COMPILER_ID:GNU>>:gcov>)
+
+# Target Core::DateTime
+list(APPEND DateTime_FILES
+        include/DateTime/Date.hpp
+        include/DateTime/DateTime.hpp
+        include/DateTime/Time.hpp
+        include/DateTime/Duration.hpp
+)
+
+list(APPEND DateTime_SRC_FILES
+        src/DateTime/Time.cpp
+)
+
+add_library(DateTime STATIC
+        ${DateTime_FILES}
+        ${DateTime_SRC_FILES}
+)
+
+add_common_compiler_options(DateTime)
+
+target_compile_features(DateTime PUBLIC ${COMMON_COMPILE_FEATURES})
+
+set_target_properties(DateTime PROPERTIES
+        LANGUAGE CXX
+        LINKER_LANGUAGE CXX
+)
+
+# Include dirs
+target_include_directories(DateTime
+        PUBLIC
+            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/DateTime>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        PRIVATE
+            $<INSTALL_INTERFACE:include/Core>
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/DateTime
+)
 
 ### Target Core::ThreadPool
 add_library(ThreadPool INTERFACE)
@@ -173,5 +210,4 @@ if(CREATE_DOCS)
             COMMENT "Generating API documentation with Doxygen"
             VERBATIM)
 endif()
-
 
