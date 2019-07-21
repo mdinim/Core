@@ -27,7 +27,7 @@ target_include_directories(Utils INTERFACE
         $<INSTALL_INTERFACE:include>
 )
 
-list(APPEND Utils_FILES 
+list(APPEND Utils_FILES
         include/Utils/TestUtil.hpp
         include/Utils/Utils.hpp
         include/Utils/ValueWrapper.hpp
