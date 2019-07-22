@@ -60,20 +60,19 @@ set_target_properties(Json PROPERTIES
 
 # Include dirs
 target_include_directories(Json
-        PUBLIC
+        INTERFACE
             $<INSTALL_INTERFACE:include>
+            $<INSTALL_INTERFACE:include/Core>
+        PRIVATE
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/Json>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        PRIVATE
-            $<INSTALL_INTERFACE:include/Core>
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/Json
 )
 
 # gcov works for clang as well
 target_link_libraries(Json PUBLIC Utils
     $<$<AND:$<BOOL:${CREATE_COVERAGE_REPORT}>,$<CXX_COMPILER_ID:GNU>>:gcov>)
 
-# Target Core::DateTime
+### Target Core::DateTime
 list(APPEND DateTime_FILES
         include/DateTime/Date.hpp
         include/DateTime/DateTime.hpp
@@ -101,13 +100,44 @@ set_target_properties(DateTime PROPERTIES
 
 # Include dirs
 target_include_directories(DateTime
-        PUBLIC
+        INTERFACE
             $<INSTALL_INTERFACE:include>
+            $<INSTALL_INTERFACE:include/Core>
+        PRIVATE
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/DateTime>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        PRIVATE
+)
+
+### Target Core::FileManager
+list(APPEND FileManager_FILES
+        include/FileManager/FileManager.hpp
+)
+
+list(APPEND FileManager_SRC_FILES
+        src/FileManager/FileManager.cpp
+)
+
+add_library(FileManager STATIC
+        ${FileManager_FILES}
+        ${FileManager_SRC_FILES}
+)
+
+add_common_compiler_options(FileManager)
+
+target_compile_features(FileManager PUBLIC ${COMMON_COMPILE_FEATURES})
+
+set_target_properties(FileManager PROPERTIES
+        LANGUAGE CXX
+        LINKER_LANGUAGE CXX
+)
+
+target_include_directories(FileManager
+        INTERFACE
             $<INSTALL_INTERFACE:include/Core>
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/DateTime
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/FileManager>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 ### Target Core::ThreadPool
@@ -137,7 +167,7 @@ target_include_directories(MessageQueue
 )
 
 # Install steps
-install(TARGETS Utils Json ThreadPool MessageQueue
+install(TARGETS Utils Json ThreadPool MessageQueue FileManager
         EXPORT core-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
