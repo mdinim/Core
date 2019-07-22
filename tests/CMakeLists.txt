@@ -110,10 +110,10 @@ target_link_libraries(Test_Json Json)
 package_add_test(Test_DateTime Time_test.cpp Duration_test.cpp)
 target_link_libraries(Test_DateTime DateTime)
 
-#package_add_test(Test_FileManager FileManager_test.cpp)
-#target_link_libraries(Test_FileManager FileManger)
+package_add_test(Test_FileManager FileManager_test.cpp)
+target_link_libraries(Test_FileManager FileManager)
 
-package_add_test(Test_Core MessageQueue_test.cpp ThreadPool_test.cpp Json_test.cpp Time_test.cpp Duration_test.cpp)
+package_add_test(Test_Core MessageQueue_test.cpp ThreadPool_test.cpp Json_test.cpp Time_test.cpp Duration_test.cpp FileManager_test.cpp)
 target_link_libraries(Test_Core Json ThreadPool MessageQueue Utils DateTime FileManager)
 
 if (${CREATE_COVERAGE_REPORT})
