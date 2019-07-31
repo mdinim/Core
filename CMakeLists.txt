@@ -111,10 +111,17 @@ target_include_directories(DateTime
 ### Target Core::FileManager
 list(APPEND FileManager_FILES
         include/FileManager/FileManager.hpp
+        include/FileManager/Exceptions.hpp
+        include/FileManager/FileBase.hpp
+        include/FileManager/TextFile.hpp
+        include/FileManager/BinaryFile.hpp
 )
 
 list(APPEND FileManager_SRC_FILES
         src/FileManager/FileManager.cpp
+        src/FileManager/FileBase.cpp
+        src/FileManager/TextFile.cpp
+        src/FileManager/BinaryFile.cpp
 )
 
 add_library(FileManager STATIC
@@ -125,6 +132,8 @@ add_library(FileManager STATIC
 add_common_compiler_options(FileManager)
 
 target_compile_features(FileManager PUBLIC ${COMMON_COMPILE_FEATURES})
+
+target_link_libraries(FileManager PUBLIC $<$<CXX_COMPILER_ID:GNU>:stdc++fs>)
 
 set_target_properties(FileManager PROPERTIES
         LANGUAGE CXX

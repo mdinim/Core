@@ -134,6 +134,8 @@ if (${CREATE_COVERAGE_REPORT})
             ${DateTime_FILES} ${DateTime_SRC_FILES}
             ${MessageQueue_FILES}
             ${ThreadPool_FILES}
-            ${Utils_FILES})
+            ${Utils_FILES}
+            ${FileManager_FILES} ${FileManager_SRC_FILES}
+    )
 endif ()
 
