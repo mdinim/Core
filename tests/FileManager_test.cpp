@@ -13,8 +13,8 @@
 #include <FileManager/Exceptions.hpp>
 #include <gtest/gtest.h>
 
-#include <Utils/Utils.hpp>
 #include <Utils/TestUtil.hpp>
+#include <Utils/Utils.hpp>
 
 namespace fs = std::filesystem;
 
@@ -95,7 +95,7 @@ struct dummy_struct {
 
 using namespace Core;
 
-TEST_F(FileTestFixture, CanCreateFiles) {
+TEST_F(FileTestFixture, can_create_files) {
     TEST_INFO << "Inaccessible directory location: " << std::endl;
     TEST_INFO << temp_not_a_file << std::endl;
 
@@ -111,14 +111,14 @@ TEST_F(FileTestFixture, CanCreateFiles) {
     ASSERT_TRUE(fs::is_regular_file(temp_file_missing_on_start));
 }
 
-TEST_F(FileTestFixture, CanRemoveFiles) {
+TEST_F(FileTestFixture, can_remove_files) {
     ASSERT_TRUE(fs::exists(temp_file_exists_on_start));
     FileBase file(temp_file_exists_on_start);
     ASSERT_TRUE(file.remove());
     ASSERT_FALSE(fs::exists(temp_file_exists_on_start));
 }
 
-TEST_F(FileTestFixture, IndicatesErrors) {
+TEST_F(FileTestFixture, indicates_errors) {
     FileBase existing_file(temp_file_exists_on_start);
     FileBase missing_file(temp_file_missing_on_start);
     ASSERT_FALSE(existing_file.create());
@@ -126,7 +126,7 @@ TEST_F(FileTestFixture, IndicatesErrors) {
     ASSERT_THROW(FileBase(fs::temp_directory_path()), Exceptions::InvalidPath);
 }
 
-TEST_F(FileTestFixture, TextFileWriteAppend) {
+TEST_F(FileTestFixture, text_file_write_append) {
     TextFile text_file(temp_text_file);
     ASSERT_FALSE(text_file.exists());
 
@@ -151,7 +151,7 @@ TEST_F(FileTestFixture, TextFileWriteAppend) {
     ASSERT_EQ(line, "");
 }
 
-TEST_F(FileTestFixture, TextFileRead) {
+TEST_F(FileTestFixture, text_file_read) {
     TextFile text_file(temp_text_file_with_content);
     ASSERT_TRUE(text_file.exists());
 
@@ -159,7 +159,7 @@ TEST_F(FileTestFixture, TextFileRead) {
     ASSERT_EQ(content, text_file_content);
 }
 
-TEST_F(FileTestFixture, BinaryFileWrite) {
+TEST_F(FileTestFixture, binary_file_write) {
     std::vector<unsigned short> data = {1,   24, 32,  59, 29,
                                         158, 59, 255, 0,  214};
     BinaryFile::ByteSequence binary_data;
@@ -182,7 +182,7 @@ TEST_F(FileTestFixture, BinaryFileWrite) {
     ASSERT_EQ(*content, BinaryFile::ByteSequence());
 }
 
-TEST_F(FileTestFixture, BinaryFileRead) {
+TEST_F(FileTestFixture, binary_file_read) {
     BinaryFile file(temp_binary_file_with_content);
     ASSERT_TRUE(file.exists());
     auto content = file.read();
@@ -190,7 +190,7 @@ TEST_F(FileTestFixture, BinaryFileRead) {
     ASSERT_EQ(*content, binary_file_content);
 }
 
-TEST_F(FileTestFixture, Errors) {
+TEST_F(FileTestFixture, text_errors) {
     TextFile text_file(temp_not_a_file);
     fs::create_directory(temp_not_a_file);
     TextFile missing_temp_file(temp_text_file);
@@ -198,8 +198,9 @@ TEST_F(FileTestFixture, Errors) {
     ASSERT_FALSE(text_file.append("Gibberish"));
     ASSERT_FALSE(missing_temp_file.clear());
     ASSERT_FALSE(text_file.read());
+}
 
-    fs::remove(temp_not_a_file);
+TEST_F(FileTestFixture, binry_errors) {
     BinaryFile binary_file(temp_not_a_file);
     fs::create_directory(temp_not_a_file);
     BinaryFile missing_binary_file(temp_binary_file);
@@ -209,7 +210,7 @@ TEST_F(FileTestFixture, Errors) {
     ASSERT_FALSE(binary_file.read());
 }
 
-TEST_F(FileTestFixture, FactoryFunctions) {
+TEST_F(FileTestFixture, factory_functions) {
     ASSERT_TRUE(temp_file_manager.text_file(temp_file_exists_on_start));
     ASSERT_TRUE(temp_file_manager.binary_file(temp_file_exists_on_start));
     ASSERT_FALSE(temp_file_manager.text_file(temp_file_missing_on_start));
@@ -238,7 +239,7 @@ TEST_F(FileTestFixture, FactoryFunctions) {
 }
 
 // TODO move this to a separate *_test file
-TEST(UtilsTest, Test) {
+TEST(UtilsTest, test) {
     struct dummy {};
     class vector_like : public std::vector<int> {};
     ASSERT_TRUE(is_container<std::vector<int>>::value);
