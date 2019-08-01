@@ -29,7 +29,7 @@ class FileTestFixture : public ::testing::Test {
         temp_binary_file = fs::temp_directory_path() / "temp.data";
         temp_binary_file_with_content =
             fs::temp_directory_path() / "temp_content.data";
-        temp_inaccessible_file = fs::temp_directory_path() / "inaccessible";
+        temp_not_a_file = fs::temp_directory_path() / "inaccessible";
     }
 
     Core::FileManager temp_file_manager;
@@ -48,7 +48,7 @@ class FileTestFixture : public ::testing::Test {
     Core::BinaryFile::ByteSequence binary_file_content = {
         12, static_cast<std::byte>(12)};
 
-    fs::path temp_inaccessible_file;
+    fs::path temp_not_a_file;
 
     void CreateIfMissing(const fs::path &path) { std::ofstream stream(path); }
 
@@ -62,8 +62,6 @@ class FileTestFixture : public ::testing::Test {
         RemoveIfPresent(temp_text_file);
         RemoveIfPresent(temp_binary_file);
         CreateIfMissing(temp_file_exists_on_start);
-        CreateIfMissing(temp_inaccessible_file);
-        fs::permissions(temp_inaccessible_file, fs::perms::none);
 
         std::ofstream stream(temp_text_file_with_content);
         stream << text_file_content;
@@ -76,15 +74,13 @@ class FileTestFixture : public ::testing::Test {
     }
 
     void TearDown() override {
-        fs::permissions(temp_inaccessible_file, fs::perms::all);
-
         RemoveIfPresent(temp_file_missing_on_start);
         RemoveIfPresent(temp_file_exists_on_start);
         RemoveIfPresent(temp_text_file);
         RemoveIfPresent(temp_text_file_with_content);
         RemoveIfPresent(temp_binary_file);
         RemoveIfPresent(temp_binary_file_with_content);
-        RemoveIfPresent(temp_inaccessible_file);
+        RemoveIfPresent(temp_not_a_file);
     }
 };
 
@@ -100,8 +96,8 @@ struct dummy_struct {
 using namespace Core;
 
 TEST_F(FileTestFixture, CanCreateFiles) {
-    TEST_INFO << "Inaccessible file location: " << std::endl;
-    TEST_INFO << temp_inaccessible_file << std::endl;
+    TEST_INFO << "Inaccessible directory location: " << std::endl;
+    TEST_INFO << temp_not_a_file << std::endl;
 
     TEST_INFO << "Existing file location: " << std::endl;
     TEST_INFO << temp_file_exists_on_start << std::endl;
@@ -195,14 +191,17 @@ TEST_F(FileTestFixture, BinaryFileRead) {
 }
 
 TEST_F(FileTestFixture, Errors) {
-    TextFile text_file(temp_inaccessible_file);
+    TextFile text_file(temp_not_a_file);
+    fs::create_directory(temp_not_a_file);
     TextFile missing_temp_file(temp_text_file);
     ASSERT_FALSE(text_file.write("Gibberish"));
     ASSERT_FALSE(text_file.append("Gibberish"));
     ASSERT_FALSE(missing_temp_file.clear());
     ASSERT_FALSE(text_file.read());
 
-    BinaryFile binary_file(temp_inaccessible_file);
+    fs::remove(temp_not_a_file);
+    BinaryFile binary_file(temp_not_a_file);
+    fs::create_directory(temp_not_a_file);
     BinaryFile missing_binary_file(temp_binary_file);
     ASSERT_FALSE(binary_file.write({static_cast<std::byte>(0)}));
     ASSERT_FALSE(binary_file.clear());
