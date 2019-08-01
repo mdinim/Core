@@ -48,8 +48,6 @@ class FileTestFixture : public ::testing::Test {
     Core::BinaryFile::ByteSequence binary_file_content = {
         12, static_cast<std::byte>(12)};
 
-    fs::path temp_not_a_file;
-
     void CreateIfMissing(const fs::path &path) { std::ofstream stream(path); }
 
     void RemoveIfPresent(const fs::path &path) {
@@ -80,7 +78,6 @@ class FileTestFixture : public ::testing::Test {
         RemoveIfPresent(temp_text_file_with_content);
         RemoveIfPresent(temp_binary_file);
         RemoveIfPresent(temp_binary_file_with_content);
-        RemoveIfPresent(temp_not_a_file);
     }
 };
 
@@ -96,9 +93,6 @@ struct dummy_struct {
 using namespace Core;
 
 TEST_F(FileTestFixture, can_create_files) {
-    TEST_INFO << "Inaccessible directory location: " << std::endl;
-    TEST_INFO << temp_not_a_file << std::endl;
-
     TEST_INFO << "Existing file location: " << std::endl;
     TEST_INFO << temp_file_exists_on_start << std::endl;
 
@@ -191,23 +185,15 @@ TEST_F(FileTestFixture, binary_file_read) {
 }
 
 TEST_F(FileTestFixture, text_errors) {
-    TextFile text_file(temp_not_a_file);
-    fs::create_directory(temp_not_a_file);
     TextFile missing_temp_file(temp_text_file);
-    ASSERT_FALSE(text_file.write("Gibberish"));
-    ASSERT_FALSE(text_file.append("Gibberish"));
     ASSERT_FALSE(missing_temp_file.clear());
-    ASSERT_FALSE(text_file.read());
+    ASSERT_FALSE(missing_temp_file.read());
 }
 
 TEST_F(FileTestFixture, binry_errors) {
-    BinaryFile binary_file(temp_not_a_file);
-    fs::create_directory(temp_not_a_file);
     BinaryFile missing_binary_file(temp_binary_file);
-    ASSERT_FALSE(binary_file.write({static_cast<std::byte>(0)}));
-    ASSERT_FALSE(binary_file.clear());
     ASSERT_FALSE(missing_binary_file.clear());
-    ASSERT_FALSE(binary_file.read());
+    ASSERT_FALSE(missing_binary_file.read());
 }
 
 TEST_F(FileTestFixture, factory_functions) {
