@@ -41,9 +41,11 @@ std::optional<std::string> TextFile::read() const {
 bool TextFile::append(const std::string &content) {
     auto lock = FileManager::lock_unique(_path);
 
-    if (std::ofstream stream{_path, std::ios::app}) {
-        stream << content;
-        return true;
+    if (_exists()) {
+        if (std::ofstream stream{_path, std::ios::app}) {
+            stream << content;
+            return true;
+        }
     }
 
     return false;

@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include <Utils/Utils.hpp>
+#include <Utils/TestUtil.hpp>
 
 namespace fs = std::filesystem;
 
@@ -75,6 +76,8 @@ class FileTestFixture : public ::testing::Test {
     }
 
     void TearDown() override {
+        fs::permissions(temp_inaccessible_file, fs::perms::all);
+
         RemoveIfPresent(temp_file_missing_on_start);
         RemoveIfPresent(temp_file_exists_on_start);
         RemoveIfPresent(temp_text_file);
@@ -97,6 +100,12 @@ struct dummy_struct {
 using namespace Core;
 
 TEST_F(FileTestFixture, CanCreateFiles) {
+    TEST_INFO << "Inaccessible file location: " << std::endl;
+    TEST_INFO << temp_inaccessible_file << std::endl;
+
+    TEST_INFO << "Existing file location: " << std::endl;
+    TEST_INFO << temp_file_exists_on_start << std::endl;
+
     ASSERT_FALSE(fs::exists(temp_file_missing_on_start));
     FileBase file(temp_file_missing_on_start);
     ASSERT_FALSE(file.exists());
