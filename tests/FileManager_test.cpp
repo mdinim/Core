@@ -29,7 +29,6 @@ class FileTestFixture : public ::testing::Test {
         temp_binary_file = fs::temp_directory_path() / "temp.data";
         temp_binary_file_with_content =
             fs::temp_directory_path() / "temp_content.data";
-        temp_not_a_file = fs::temp_directory_path() / "inaccessible";
     }
 
     Core::FileManager temp_file_manager;
