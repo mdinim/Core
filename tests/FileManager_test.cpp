@@ -29,6 +29,7 @@ class FileTestFixture : public ::testing::Test {
         temp_binary_file = fs::temp_directory_path() / "temp.data";
         temp_binary_file_with_content =
             fs::temp_directory_path() / "temp_content.data";
+        temp_not_a_file = fs::temp_directory_path() / "temp_dir";
     }
 
     Core::FileManager temp_file_manager;
@@ -42,10 +43,17 @@ class FileTestFixture : public ::testing::Test {
         "This is the content you are dealing with\nWith multiple "
         "lines and all, but no endl for additional tests";
 
+    fs::path temp_not_a_file;
+
     fs::path temp_binary_file;
     fs::path temp_binary_file_with_content;
     Core::BinaryFile::ByteSequence binary_file_content = {
         12, static_cast<std::byte>(12)};
+
+    void CreateTempDir() noexcept {
+        std::error_code error;
+        fs::create_directory(temp_not_a_file, error);
+    }
 
     void CreateIfMissing(const fs::path &path) { std::ofstream stream(path); }
 
@@ -77,6 +85,7 @@ class FileTestFixture : public ::testing::Test {
         RemoveIfPresent(temp_text_file_with_content);
         RemoveIfPresent(temp_binary_file);
         RemoveIfPresent(temp_binary_file_with_content);
+        RemoveIfPresent(temp_not_a_file);
     }
 };
 
@@ -187,12 +196,22 @@ TEST_F(FileTestFixture, text_errors) {
     TextFile missing_temp_file(temp_text_file);
     ASSERT_FALSE(missing_temp_file.clear());
     ASSERT_FALSE(missing_temp_file.read());
+
+    TextFile not_a_file(temp_not_a_file);
+    CreateTempDir();
+    ASSERT_FALSE(not_a_file.write("Gibberish"));
+    ASSERT_FALSE(not_a_file.append("Gibberish"));
 }
 
-TEST_F(FileTestFixture, binry_errors) {
+TEST_F(FileTestFixture, binary_errors) {
     BinaryFile missing_binary_file(temp_binary_file);
     ASSERT_FALSE(missing_binary_file.clear());
     ASSERT_FALSE(missing_binary_file.read());
+
+
+    BinaryFile not_a_file(temp_not_a_file);
+    CreateTempDir();
+    ASSERT_FALSE(not_a_file.write({static_cast<std::byte>(0)}));
 }
 
 TEST_F(FileTestFixture, factory_functions) {
