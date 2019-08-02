@@ -2,7 +2,7 @@
 // Created by Dániel Molnár on 2019-03-09.
 //
 
-#include <Json.hpp>
+#include <Json/Json.hpp>
 #include <Utils/TestUtil.hpp>
 
 #include <gtest/gtest.h>
