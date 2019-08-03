@@ -18,7 +18,7 @@ static std::optional<T> file(const Core::FileManager::Path &path, bool create) {
     if (path.is_relative())
         return std::nullopt;
 
-    if (!fs::is_regular_file(path)) {
+    if (!fs::is_regular_file(path) && !fs::exists(path)) {
         if (create) {
             fs::create_directories(path.parent_path());
             std::ofstream stream(path);

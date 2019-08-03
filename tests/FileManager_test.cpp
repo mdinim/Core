@@ -123,9 +123,10 @@ TEST_F(FileTestFixture, can_remove_files) {
 TEST_F(FileTestFixture, indicates_errors) {
     FileBase existing_file(temp_file_exists_on_start);
     FileBase missing_file(temp_file_missing_on_start);
+    CreateTempDir();
     ASSERT_FALSE(existing_file.create());
     ASSERT_FALSE(missing_file.remove());
-    ASSERT_THROW(temp_file_manager.text_file(temp_not_a_file),
+    ASSERT_THROW(FileManager::text_file(temp_not_a_file, false),
                  Exceptions::InvalidPath);
 }
 
