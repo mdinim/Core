@@ -6,6 +6,7 @@
 #define CORE_FILEMANAGER_HPP
 
 #include <filesystem>
+#include <vector>
 #include <fstream>
 #include <map>
 #include <mutex>
@@ -32,7 +33,7 @@ class FileManager {
     using UniqueLock = std::unique_lock<std::shared_mutex>;
 
     static std::mutex _guards_guard;
-    static std::map<std::filesystem::path, std::shared_mutex> _guards;
+    static std::map<Path, std::shared_mutex> _guards;
     static std::shared_mutex &get_guard(const Path &path);
 
     inline static SharedLock lock_shared(const Path &path) {
@@ -43,7 +44,7 @@ class FileManager {
         return UniqueLock(get_guard(path));
     }
 
-    const std::vector<std::filesystem::path> _search_paths;
+    const std::vector<Path> _search_paths;
 
 
   public:

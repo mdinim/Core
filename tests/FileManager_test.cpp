@@ -125,7 +125,8 @@ TEST_F(FileTestFixture, indicates_errors) {
     FileBase missing_file(temp_file_missing_on_start);
     ASSERT_FALSE(existing_file.create());
     ASSERT_FALSE(missing_file.remove());
-    ASSERT_THROW(FileBase(fs::temp_directory_path()), Exceptions::InvalidPath);
+    ASSERT_THROW(temp_file_manager.text_file(temp_not_a_file),
+                 Exceptions::InvalidPath);
 }
 
 TEST_F(FileTestFixture, text_file_write_append) {
@@ -207,7 +208,6 @@ TEST_F(FileTestFixture, binary_errors) {
     BinaryFile missing_binary_file(temp_binary_file);
     ASSERT_FALSE(missing_binary_file.clear());
     ASSERT_FALSE(missing_binary_file.read());
-
 
     BinaryFile not_a_file(temp_not_a_file);
     CreateTempDir();

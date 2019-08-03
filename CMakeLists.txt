@@ -64,7 +64,6 @@ target_include_directories(Json
             $<INSTALL_INTERFACE:include>
             $<INSTALL_INTERFACE:include/Core>
         PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/Json>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
@@ -104,7 +103,6 @@ target_include_directories(DateTime
             $<INSTALL_INTERFACE:include>
             $<INSTALL_INTERFACE:include/Core>
         PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/DateTime>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
@@ -145,7 +143,6 @@ target_include_directories(FileManager
             $<INSTALL_INTERFACE:include/Core>
             $<INSTALL_INTERFACE:include>
         PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/FileManager>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
@@ -176,25 +173,27 @@ target_include_directories(MessageQueue
 )
 
 # Install steps
-install(TARGETS Utils Json ThreadPool MessageQueue FileManager
+install(TARGETS Utils Json ThreadPool MessageQueue FileManager DateTime
         EXPORT core-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-install(FILES ${Json_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(DIRECTORY include/Utils  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${ThreadPool_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
-install(FILES ${MessageQueue_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES       ${Json_FILES}           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY   include/Utils           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES       ${ThreadPool_FILES}     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(FILES       ${MessageQueue_FILES}   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY   include/DateTime        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY   include/FileManager     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 
 # Export targets
 install(EXPORT core-targets
         FILE
-        CoreTargets.cmake
+            CoreTargets.cmake
         NAMESPACE
-        Core::
+            Core::
         DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}/cmake/Core
+            ${CMAKE_INSTALL_LIBDIR}/cmake/Core
 )
 
 include(CMakePackageConfigHelpers)
