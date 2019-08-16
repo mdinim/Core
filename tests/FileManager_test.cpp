@@ -243,14 +243,8 @@ TEST_F(FileTestFixture, factory_functions) {
     }
 }
 
-// TODO move this to a separate *_test file
-TEST(UtilsTest, test) {
-    struct dummy {};
-    class vector_like : public std::vector<int> {};
-    ASSERT_TRUE(is_container<std::vector<int>>::value);
-    bool is_map_container = is_container<std::map<int, int>>::value;
-    ASSERT_TRUE(is_map_container);
-    ASSERT_TRUE(is_container<vector_like>::value);
-    ASSERT_FALSE(is_container<int>::value);
-    ASSERT_FALSE(is_container<dummy>::value);
+TEST_F(FileTestFixture, path_is_correct) {
+    auto file = temp_file_manager.text_file("exists");
+    ASSERT_EQ(file->path(), temp_file_exists_on_start);
 }
+
