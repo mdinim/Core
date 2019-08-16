@@ -23,6 +23,10 @@ class FileBase {
 
     bool remove() const;
 
+    const FileManager::Path& path() const {
+        return _path;
+    }
+
     bool create();
 };
 

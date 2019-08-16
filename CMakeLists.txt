@@ -20,17 +20,21 @@ project(Core VERSION 0.0.1 LANGUAGES CXX)
 include(GNUInstallDirs)
 
 ### Target Core::Utils
+list(APPEND Utils_FILES
+        include/Utils/TestUtil.hpp
+        include/Utils/Utils.hpp
+        include/Utils/ValueWrapper.hpp
+        include/Utils/Size.hpp
+        )
+
+list(APPEND Utils_SRC_FILES
+)
+
 add_library(Utils INTERFACE)
 
 # We want this to be included with the #include <Core/{...}>
 target_include_directories(Utils INTERFACE
         $<INSTALL_INTERFACE:include>
-)
-
-list(APPEND Utils_FILES
-        include/Utils/TestUtil.hpp
-        include/Utils/Utils.hpp
-        include/Utils/ValueWrapper.hpp
 )
 
 # Until this has more files this is installed as a single header
