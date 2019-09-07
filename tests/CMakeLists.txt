@@ -116,8 +116,11 @@ target_link_libraries(Test_DateTime DateTime)
 package_add_test(Test_FileManager FileManager_test.cpp)
 target_link_libraries(Test_FileManager FileManager)
 
-package_add_test(Test_Core Utils_test.cpp MessageQueue_test.cpp ThreadPool_test.cpp Json_test.cpp Time_test.cpp Duration_test.cpp FileManager_test.cpp)
-target_link_libraries(Test_Core Json Utils ThreadPool MessageQueue Utils DateTime FileManager)
+package_add_test(Test_Graph BinaryTree_test.cpp BinarySearchTree_test.cpp)
+target_link_libraries(Test_Graph Graph)
+
+package_add_test(Test_Core Utils_test.cpp MessageQueue_test.cpp ThreadPool_test.cpp Json_test.cpp Time_test.cpp Duration_test.cpp FileManager_test.cpp BinaryTree_test.cpp BinarySearchTree_test.cpp)
+target_link_libraries(Test_Core Json Utils ThreadPool MessageQueue Utils DateTime FileManager Graph)
 
 if (${CREATE_COVERAGE_REPORT})
     if ("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")

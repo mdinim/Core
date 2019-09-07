@@ -150,6 +150,23 @@ target_include_directories(FileManager
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
+### Target Core::Graph
+list(APPEND Graph_FILES
+        include/Graph/IGraphNode.hpp
+        include/Graph/BinaryTree.hpp
+        include/Graph/BinarySearchTree.hpp
+        include/Graph/Views.hpp
+)
+
+list(APPEND Graph_SRC_FILES)
+
+add_library(Graph INTERFACE)
+
+target_include_directories(Graph
+        INTERFACE
+            $<INSTALL_INTERFACE:include>
+)
+
 ### Target Core::ThreadPool
 add_library(ThreadPool INTERFACE)
 
@@ -177,7 +194,7 @@ target_include_directories(MessageQueue
 )
 
 # Install steps
-install(TARGETS Utils Json ThreadPool MessageQueue FileManager DateTime
+install(TARGETS Utils Json ThreadPool MessageQueue FileManager DateTime Graph
         EXPORT core-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -189,6 +206,7 @@ install(FILES       ${ThreadPool_FILES}     DESTINATION ${CMAKE_INSTALL_INCLUDED
 install(FILES       ${MessageQueue_FILES}   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(DIRECTORY   include/DateTime        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(DIRECTORY   include/FileManager     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY   include/Graph           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 
 # Export targets
 install(EXPORT core-targets
@@ -236,6 +254,7 @@ if(PACKAGE_TESTS)
     add_subdirectory(tests)
 endif()
 
+option(CREATE_DOCS "Create documentation" OFF)
 if(CREATE_DOCS)
     find_package(Doxygen
             REQUIRED dot
