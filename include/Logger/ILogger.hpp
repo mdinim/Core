@@ -15,12 +15,16 @@ namespace Core {
 
     class ILogger {
     public:
+        /// \brief Log a single message with a specific priority.
         virtual void log(unsigned, const std::string&) = 0;
 
+        /// \brief Log a message with the built-in INFO_LEVEL priority
         virtual void info(const std::string&) = 0;
 
+        /// \brief Log a message with the built-in WARNING_LEVEL priority
         virtual void warning(const std::string&) = 0;
 
+        /// \brief Log a message with the built-in ERROR_LEVEL priority
         virtual void error(const std::string&) = 0;
     };
 }

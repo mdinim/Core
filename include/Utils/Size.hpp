@@ -8,6 +8,9 @@
 #include <numeric>
 #include <ratio>
 #include <type_traits>
+#include <ostream>
+
+#include <Utils/Utils.hpp>
 
 namespace Core {
 namespace SizeLiterals {

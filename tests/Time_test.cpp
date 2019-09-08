@@ -122,22 +122,22 @@ TEST(Time, format_12hr)
     stream << Time::am_pm;
     
     stream << time;
-    EXPECT_EQ(stream.str(), "8:42:12.5 PM");
+    EXPECT_EQ(stream.str(), "8:42:12.005 PM");
     
     time = Time(12, 42, 12, 5);
     reset_stream();
     stream << time;
-    EXPECT_EQ(stream.str(), "12:42:12.5 PM");
+    EXPECT_EQ(stream.str(), "12:42:12.005 PM");
     
     time = Time(13, 42, 12, 5);
     reset_stream();
     stream << time;
-    EXPECT_EQ(stream.str(), "1:42:12.5 PM");
+    EXPECT_EQ(stream.str(), "1:42:12.005 PM");
     
     time = Time(0, 42, 12, 5);
     reset_stream();
     stream << time;
-    EXPECT_EQ(stream.str(), "12:42:12.5 AM");
+    EXPECT_EQ(stream.str(), "12:42:12.005 AM");
 }
 
 TEST(Time, input_operator)
