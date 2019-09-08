@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 
+include(GNUInstallDirs)
+
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/Core)
 set(COMMON_COMPILE_OPTIONS  -Wall -pedantic -pedantic-errors -Werror -Wextra)
 set(COMMON_COMPILE_FEATURES cxx_std_17)
@@ -16,8 +18,6 @@ endmacro()
 
 # Project name
 project(Core VERSION 0.0.1 LANGUAGES CXX)
-
-include(GNUInstallDirs)
 
 ### Target Core::Utils
 list(APPEND Utils_FILES
@@ -36,6 +36,39 @@ add_library(Utils INTERFACE)
 target_include_directories(Utils INTERFACE
         $<INSTALL_INTERFACE:include>
 )
+
+list(APPEND Logger_FILES
+        include/Logger/ILogger.hpp
+        include/Logger/BaseLogger.hpp
+        include/Logger/StreamLogger.hpp
+)
+
+list(APPEND Logger_SRC_FILES
+        src/Logger/StreamLogger.cpp)
+
+add_library(Logger STATIC
+                ${Logger_FILES}
+                ${Logger_SRC_FILES}
+)
+
+add_common_compiler_options(Logger)
+
+target_compile_features(Logger PUBLIC ${COMMON_COMPILE_FEATURES})
+
+set_target_properties(Logger PROPERTIES
+        LANGUAGE CXX
+        LINKER_LANGUAGE CXX
+)
+
+target_include_directories(Logger
+        INTERFACE
+            $<INSTALL_INTERFACE:include/Core>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+target_link_libraries(Logger PUBLIC DateTime)
 
 # Until this has more files this is installed as a single header
 list(APPEND Json_FILES

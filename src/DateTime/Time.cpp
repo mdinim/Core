@@ -48,7 +48,7 @@ namespace Core {
         const bool is_am_pm = current_time_format == TimeFormat::AmPm;
         const std::array<const unsigned int, 4> elements =
             { time.hour(), time.minute(), time.second(), time.millisecond() };
-        const std::array<short, 4> widths = { static_cast<short>((is_am_pm ? 1 : 2)), 2, 2, 0 };
+        const std::array<short, 4> widths = { static_cast<short>((is_am_pm ? 1 : 2)), 2, 2, 3 };
         
         static_assert(elements.size() == Time::element_masks.size());
         
