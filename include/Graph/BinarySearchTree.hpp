@@ -149,6 +149,29 @@ template <class T> class BinarySearchTree {
 
     /// \brief Find a value in the graph.
     /// \returns A reference to the node.
+    std::optional<std::reference_wrapper<Node>> find(const T &value) {
+        if (empty())
+            return {};
+
+        Node *walker(&root_node());
+        while (walker->value() != value) {
+            if (value > walker->value()) {
+                if (walker->has_right_child())
+                    walker = &walker->right_child();
+                else
+                    return {};
+            } else {
+                if (walker->has_left_child())
+                    walker = &walker->left_child();
+                else
+                    return {};
+            }
+        }
+
+        return *walker;
+    }
+
+    /// \copydoc find
     std::optional<std::reference_wrapper<const Node>>
     find(const T &value) const {
         if (empty())
@@ -156,14 +179,14 @@ template <class T> class BinarySearchTree {
 
         const Node *walker(&root_node());
         while (walker->value() != value) {
-            if (walker->value() >= value) {
-                if (walker->has_left_child())
-                    walker = &walker->left_child();
+            if (value > walker->value()) {
+                if (walker->has_right_child())
+                    walker = &walker->right_child();
                 else
                     return {};
             } else {
-                if (walker->has_right_child())
-                    walker = &walker->right_child();
+                if (walker->has_left_child())
+                    walker = &walker->left_child();
                 else
                     return {};
             }
@@ -183,7 +206,7 @@ template <class T> class BinarySearchTree {
     }
 
     /// \copydoc remove_node
-    void remove_node(Node &node) { node.get_as_child_ref().reset(); }
+    void remove_node(const Node &node) { node.get_as_child_ref().reset(); }
 
     /// \brief Remove the node that holds the given value.
     void remove_value(const T &value) {
@@ -208,7 +231,7 @@ template <class T> class BinarySearchTree {
                     walker->_left.reset();
                 } else {
                     InOrder::ForwardIterator<InOrder::View<BinarySearchTree<T>>>
-                        iterator(*this, walker);
+                        iterator(this, walker);
                     ++iterator;
 
                     walker->_value = std::move(iterator->_value);
@@ -230,7 +253,7 @@ template <class T> class BinarySearchTree {
 
     /// \brief Insert a value to the graph.
     /// \returns Reference to the node that was created.
-    const Node &insert(const T &value) {
+    Node &insert(const T &value) {
         std::reference_wrapper<std::unique_ptr<Node>> walker(_root_node);
         Node *parent = nullptr;
         while (walker.get() != nullptr) {

@@ -64,4 +64,24 @@ TEST(UtilsTest, size_literals)
     reset_stream();
     stream << -25_GB;
     ASSERT_EQ(stream.str(), "-25 GB");
+
+    ASSERT_LT(2_GB, 4096_MB);
+    ASSERT_GT(2_GB + 2049_MB, 4096_MB);
+
+    ASSERT_GE(2_GB + 2049_MB, 4096_MB + 1024_KB);
+
+    ASSERT_EQ(2_GB + 2, 4098_MB - 2);
+
+    auto four_gigs = 4_GB;
+    four_gigs -= 2;
+    ASSERT_EQ(four_gigs, 4096_MB - 2_GB);
+
+    ASSERT_LE(four_gigs, 4096_MB);
+
+    SizeLiterals::Byte one_kb = 1_KB;
+    ASSERT_EQ(1024_B, one_kb);
+
+    ASSERT_EQ((2_GB / 2), 1024_MB);
+
+    ASSERT_EQ(1_GB / 2, 512_MB);
 }

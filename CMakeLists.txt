@@ -227,7 +227,7 @@ target_include_directories(MessageQueue
 )
 
 # Install steps
-install(TARGETS Utils Json ThreadPool MessageQueue FileManager DateTime Graph
+install(TARGETS Utils Json ThreadPool MessageQueue FileManager DateTime Graph Logger
         EXPORT core-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -240,6 +240,7 @@ install(FILES       ${MessageQueue_FILES}   DESTINATION ${CMAKE_INSTALL_INCLUDED
 install(DIRECTORY   include/DateTime        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(DIRECTORY   include/FileManager     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 install(DIRECTORY   include/Graph           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
+install(DIRECTORY   include/Logger          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Core)
 
 # Export targets
 install(EXPORT core-targets

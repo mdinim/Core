@@ -10,6 +10,7 @@
 
 template <class T, class = void> struct TypeDescriptor {
     using graph_type_ref = T &;
+    using graph_type = std::remove_reference_t<T>;
     using node_type = typename std::remove_reference_t<T>::Node;
     using node_type_ref = node_type &;
 };
@@ -17,6 +18,7 @@ template <class T, class = void> struct TypeDescriptor {
 template <class T>
 struct TypeDescriptor<T, typename std::enable_if_t<std::is_const_v<T>>> {
     using graph_type_ref = const T &;
+    using graph_type = std::remove_reference_t<const T>;
     using node_type = const typename T::Node;
     using node_type_ref = node_type &;
 };
@@ -28,19 +30,18 @@ template <class View> class BackwardIterator {
   private:
     friend class ForwardIterator<View>;
 
-    typename View::graph_type_ref _viewed_obj;
+    typename View::graph_type *_viewed_obj;
     typename View::node_type *_viewed_node;
 
   public:
-    BackwardIterator(typename View::graph_type_ref graph,
+    BackwardIterator(typename View::graph_type *graph,
                      typename View::node_type *node)
         : _viewed_obj(graph), _viewed_node(node) {}
 
     bool operator!=(const BackwardIterator &other) { return !(*this == other); }
 
     bool operator==(const BackwardIterator &other) {
-        return std::addressof(_viewed_obj) ==
-                   std::addressof(other._viewed_obj) &&
+        return _viewed_obj == other._viewed_obj &&
                _viewed_node == other._viewed_node;
     }
 
@@ -55,7 +56,7 @@ template <class View> class BackwardIterator {
     BackwardIterator &operator--() {
         if (!_viewed_node) { // at the end, we need the first forward it
             _viewed_node =
-                _viewed_obj.empty() ? nullptr : &_viewed_obj.root_node();
+                _viewed_obj->empty() ? nullptr : &_viewed_obj->root_node();
         } else {
             ForwardIterator<View> forward_this{_viewed_obj, _viewed_node};
 
@@ -109,19 +110,18 @@ template <class View> class ForwardIterator {
   private:
     friend class BackwardIterator<View>;
 
-    typename View::graph_type_ref _viewed_obj;
+    typename View::graph_type *_viewed_obj;
     typename View::node_type *_viewed_node;
 
   public:
-    ForwardIterator(typename View::graph_type_ref graph,
+    ForwardIterator(typename View::graph_type *graph,
                     typename View::node_type *node)
         : _viewed_obj(graph), _viewed_node(node) {}
 
     bool operator!=(const ForwardIterator &other) { return !(*this == other); }
 
     bool operator==(const ForwardIterator &other) {
-        return std::addressof(_viewed_obj) ==
-                   std::addressof(other._viewed_obj) &&
+        return _viewed_obj == other._viewed_obj &&
                _viewed_node == other._viewed_node;
     }
 
@@ -135,9 +135,9 @@ template <class View> class ForwardIterator {
 
     ForwardIterator &operator--() {
         if (!_viewed_node) {
-            if (!_viewed_obj.empty()) {
+            if (!_viewed_obj->empty()) {
                 std::reference_wrapper<typename View::node_type> walker =
-                    _viewed_obj.root_node();
+                    _viewed_obj->root_node();
 
                 while (walker.get().has_right_child()) {
                     walker = walker.get().right_child();
@@ -215,6 +215,7 @@ template <class T> class View {
 
   public:
     using graph_type_ref = typename TypeDescriptor<T>::graph_type_ref;
+    using graph_type = typename TypeDescriptor<T>::graph_type;
     using node_type = typename TypeDescriptor<T>::node_type;
     using node_type_ref = typename TypeDescriptor<T>::node_type_ref;
 
@@ -223,10 +224,10 @@ template <class T> class View {
     ForwardIterator<View> begin() const {
         if (_graph.empty())
             return end();
-        return {_graph, &_graph.root_node()};
+        return {&_graph, &_graph.root_node()};
     }
 
-    ForwardIterator<View> end() const { return {_graph, nullptr}; }
+    ForwardIterator<View> end() const { return {&_graph, nullptr}; }
 
     BackwardIterator<View> rbegin() const {
         if (!_graph.empty()) {
@@ -239,14 +240,18 @@ template <class T> class View {
                 walker = walker.get().left_child();
             }
 
-            return {_graph, &walker.get()};
+            return {&_graph, &walker.get()};
         }
         return rend();
     }
 
-    BackwardIterator<View> rend() const { return {_graph, nullptr}; }
+    BackwardIterator<View> rend() const { return {&_graph, nullptr}; }
 };
 
+template <class T, class U>
+ForwardIterator(T, U)->ForwardIterator<View<std::remove_pointer_t<T>>>;
+template <class T, class U>
+BackwardIterator(T, U)->BackwardIterator<View<std::remove_pointer_t<T>>>;
 template <class T> View(T &)->View<T>;
 template <class T> View(const T &)->View<const T>;
 
@@ -429,7 +434,7 @@ template <class View> class ForwardIterator {
   private:
     friend class BackwardIterator<View>;
 
-    typename View::graph_type_ref _viewed_obj;
+    typename View::graph_type *_viewed_obj;
     typename View::node_type *_viewed_node;
 
     static constexpr typename View::node_type *
@@ -441,7 +446,7 @@ template <class View> class ForwardIterator {
     }
 
   public:
-    ForwardIterator(typename View::graph_type_ref graph,
+    ForwardIterator(typename View::graph_type *graph,
                     typename View::node_type *node)
         : _viewed_obj(graph), _viewed_node(node) {}
 
@@ -450,7 +455,8 @@ template <class View> class ForwardIterator {
     }
 
     bool operator==(const ForwardIterator &other) const {
-        return _viewed_node == other._viewed_node;
+        return _viewed_obj == other._viewed_obj &&
+               _viewed_node == other._viewed_node;
     }
 
     ForwardIterator operator--(int) {
@@ -463,10 +469,10 @@ template <class View> class ForwardIterator {
 
     ForwardIterator &operator--() {
         if (!_viewed_node) { // at the end, we need the first backward it
-            if (!_viewed_obj.empty()) {
+            if (!_viewed_obj->empty()) {
 
                 std::reference_wrapper<typename View::node_type> walker =
-                    _viewed_obj.root_node();
+                    _viewed_obj->root_node();
 
                 while (walker.get().has_right_child()) {
                     walker = walker.get().right_child();
@@ -538,7 +544,7 @@ template <class View> class BackwardIterator {
   private:
     friend class ForwardIterator<View>;
 
-    typename View::graph_type_ref _viewed_obj;
+    typename View::graph_type *_viewed_obj;
     typename View::node_type *_viewed_node;
 
     static constexpr typename View::node_type *
@@ -550,7 +556,7 @@ template <class View> class BackwardIterator {
     }
 
   public:
-    BackwardIterator(typename View::graph_type_ref graph,
+    BackwardIterator(typename View::graph_type *graph,
                      typename View::node_type *node)
         : _viewed_obj(graph), _viewed_node(node) {}
 
@@ -563,7 +569,7 @@ template <class View> class BackwardIterator {
     }
 
     BackwardIterator operator--(int) {
-        BackwardIterator result{_viewed_node};
+        BackwardIterator result{_viewed_obj, _viewed_node};
 
         --*(this);
 
@@ -572,9 +578,9 @@ template <class View> class BackwardIterator {
 
     BackwardIterator &operator--() {
         if (!_viewed_node) { // at the end, we need the first forward it
-            if (!_viewed_obj.empty()) {
+            if (!_viewed_obj->empty()) {
                 std::reference_wrapper<typename View::node_type> walker =
-                    _viewed_obj.root_node();
+                    _viewed_obj->root_node();
 
                 while (walker.get().has_left_child()) {
                     walker = walker.get().left_child();
@@ -651,6 +657,7 @@ template <class T> class View {
 
   public:
     using graph_type_ref = typename TypeDescriptor<T>::graph_type_ref;
+    using graph_type = typename TypeDescriptor<T>::graph_type;
     using node_type = typename TypeDescriptor<T>::node_type;
     using node_type_ref = typename TypeDescriptor<T>::node_type_ref;
 
@@ -666,10 +673,10 @@ template <class T> class View {
             walker = walker.get().left_child();
         }
 
-        return {_graph, &walker.get()};
+        return {&_graph, &walker.get()};
     }
 
-    ForwardIterator<View> end() const { return {_graph, nullptr}; }
+    ForwardIterator<View> end() const { return {&_graph, nullptr}; }
 
     BackwardIterator<View> rbegin() const {
         if (_graph.empty())
@@ -681,12 +688,16 @@ template <class T> class View {
             walker = walker.get().right_child();
         }
 
-        return {_graph, &walker.get()};
+        return {&_graph, &walker.get()};
     }
 
-    BackwardIterator<View> rend() const { return {_graph, nullptr}; }
+    BackwardIterator<View> rend() const { return {&_graph, nullptr}; }
 };
 
+template <class T, class U>
+ForwardIterator(T, U)->ForwardIterator<View<std::remove_pointer_t<T>>>;
+template <class T, class U>
+BackwardIterator(T, U)->BackwardIterator<View<std::remove_pointer_t<T>>>;
 template <class T> View(T &)->View<T>;
 template <class T> View(const T &)->View<const T>;
 

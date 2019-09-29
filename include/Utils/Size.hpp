@@ -6,9 +6,9 @@
 #define CORE_SIZE_HPP
 
 #include <numeric>
+#include <ostream>
 #include <ratio>
 #include <type_traits>
-#include <ostream>
 
 #include <Utils/Utils.hpp>
 
@@ -92,11 +92,23 @@ template <class Rep, class Ratio = std::ratio<1>> class Size {
         return copy;
     }
 
+    /// /brief Subtract-assign operator
+    constexpr Size &operator-=(const Rep &rhs) {
+        (*this) += -rhs;
+        return *this;
+    }
+
+    /// /brief Add-assign operator
+    constexpr Size &operator+=(const Rep &rhs) {
+        value += rhs;
+        return *this;
+    }
+
     /// /brief Add-assign operator
     template <class Rep2, class Ratio2>
     constexpr Size &operator+=(const Size<Rep2, Ratio2> &rhs) {
         Size converted_rhs = rhs;
-        value += converted_rhs.value;
+        (*this) += converted_rhs.value;
         return *this;
     }
 
@@ -105,6 +117,11 @@ template <class Rep, class Ratio = std::ratio<1>> class Size {
     Size &operator-=(const Size<Rep2, Ratio2> &rhs) {
         (*this) += -rhs;
         return *this;
+    }
+
+    Size<int64_t, SizeLiterals::B_ratio> operator/(const Rep& divisor) const {
+        Size<int64_t, SizeLiterals::B_ratio> ret = *this;
+        return ret.value / divisor;
     }
 
     /// \brief output operator
@@ -129,6 +146,83 @@ template <class Rep, class Ratio = std::ratio<1>> class Size {
     }
 }; // namespace Core
 
+
+/// \brief Greater-than or equal operator
+template <class Rep1, class Ratio1, class Rep2>
+bool constexpr operator>=(const Size<Rep1, Ratio1> &lhs,
+                          const Rep2 &rhs) {
+    return lhs.value >= rhs;
+}
+
+/// \brief Less-than or equal operator
+template <class Rep1, class Ratio1, class Rep2>
+bool constexpr operator<=(const Size<Rep1, Ratio1> &lhs,
+                          const Rep2 &rhs) {
+    return lhs.value <= rhs;
+}
+
+/// \brief Equality operator
+template <class Rep1, class Ratio1, class Rep2>
+bool constexpr operator==(const Size<Rep1, Ratio1> &lhs,
+                         const Rep2 &rhs) {
+    return lhs.value == rhs;
+}
+
+/// \brief Greater-than operator
+template <class Rep1, class Ratio1, class Rep2>
+bool constexpr operator>(const Size<Rep1, Ratio1> &lhs,
+                         const Rep2 &rhs) {
+    return lhs.value > rhs;
+}
+
+/// \brief Less-than operator
+template <class Rep1, class Ratio1, class Rep2>
+bool constexpr operator<(const Size<Rep1, Ratio1> &lhs,
+                         const Rep2 &rhs) {
+    return lhs.value < rhs;
+}
+
+
+/// \brief Less-than operator
+template <class Rep1, class Ratio1, class Rep2, class Ratio2>
+bool constexpr operator<(const Size<Rep1, Ratio1> &lhs,
+                         const Size<Rep2, Ratio2> &rhs) {
+    using CommonSize =
+        typename std::common_type<Size<Rep1, Ratio1>, Size<Rep2, Ratio2>>::type;
+    CommonSize common_lhs = lhs;
+    CommonSize common_rhs = rhs;
+
+    return common_lhs.value < common_rhs.value;
+}
+
+/// \brief Greater-than operator
+template <class Rep1, class Ratio1, class Rep2, class Ratio2>
+bool constexpr operator>(const Size<Rep1, Ratio1> &lhs,
+                         const Size<Rep2, Ratio2> &rhs) {
+    return !(lhs < rhs) && lhs != rhs;
+}
+
+/// \brief Lesser-or-equal operator
+template <class Rep1, class Ratio1, class Rep2, class Ratio2>
+bool constexpr operator<=(const Size<Rep1, Ratio1> &lhs,
+                          const Size<Rep2, Ratio2> &rhs) {
+    return !(lhs > rhs);
+}
+
+/// \brief Greater-or-equal operator
+template <class Rep1, class Ratio1, class Rep2, class Ratio2>
+bool constexpr operator>=(const Size<Rep1, Ratio1> &lhs,
+                          const Size<Rep2, Ratio2> &rhs) {
+    return !(lhs < rhs);
+}
+
+/// \brief Inequality operator
+template <class Rep1, class Ratio1, class Rep2, class Ratio2>
+bool constexpr operator!=(const Size<Rep1, Ratio1> &lhs,
+                          const Size<Rep2, Ratio2> &rhs) {
+    return !(lhs == rhs);
+}
+
 /// \brief Equality operator
 template <class Rep1, class Ratio1, class Rep2, class Ratio2>
 bool constexpr operator==(const Size<Rep1, Ratio1> &lhs,
@@ -148,8 +242,24 @@ operator+(const Size<Rep1, Ratio1> &lhs, const Size<Rep2, Ratio2> &rhs) {
     using CommonSize =
         typename std::common_type<Size<Rep1, Ratio1>, Size<Rep2, Ratio2>>::type;
     CommonSize common_lhs = lhs;
-    CommonSize common_rhs = rhs;
-    return CommonSize(common_lhs.value + common_rhs.value);
+    common_lhs += rhs;
+    return common_lhs;
+}
+
+/// \brief Add two sizes of different types (with automatic conversion)
+template <class Rep, class Ratio, class Rep2>
+Size<Rep, Ratio> constexpr operator+(const Size<Rep, Ratio> &lhs,
+                                     const Rep2 &rhs) {
+    auto ret = lhs;
+    ret += rhs;
+    return ret;
+}
+
+/// \brief Add two sizes of different types (with automatic conversion)
+template <class Rep, class Ratio, class Rep2>
+Size<Rep, Ratio> constexpr operator-(const Size<Rep, Ratio> &lhs,
+                                     const Rep2 &rhs) {
+    return lhs + -rhs;
 }
 
 /// \brief Subtract two sizes of different types (utilizes the add operator)
