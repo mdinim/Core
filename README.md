@@ -20,4 +20,5 @@ A repository I play around in hoping to learn something new. Uses CMake to build
    - Asynchronous logging
 
  
- 
+ ## CI/CD
+ Tests are ran constantly on GitLab (using GitLab CI).
